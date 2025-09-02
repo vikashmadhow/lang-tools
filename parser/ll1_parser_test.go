@@ -1,28 +1,49 @@
-package grammar
+package parser
 
 import (
-    "testing"
+	"testing"
+
+	"github.com/vikashmadhow/lang-tools/grammar"
 )
 
 // Seq[characters] -> Lexer -> Seq[Token] -> Modulator... -> Seq[Token] -> Syntax Analyser -> ST -> Semantic Processors... -> AT -> Translators... -> Translation
 
 func TestSimpleParser(t *testing.T) {
-    g := testSimpleGrammar()
-    parser := NewLL1Parser(g, g.ProdByName["e"])
+	g := testSimpleGrammar()
+	parser := NewLL1Parser(g, g.ProdByName["e"])
 
-    tree, _ := parser.ParseText("x + y")
-    println(tree.ToGraphViz("x + y"))
+	tree, err := parser.ParseText("x + y")
+	if err != nil {
+		println(err)
+	}
+	println(GraphViz(tree, "x + y"))
 
-    //tree, err := g.ParseTextFromStart(
-    //	`let x := 1000;
-    //	 let y := 2000;
-    //    x = x + 5 * (4 + y / 2);
-    //	 y = y + x;`,
-    //)
-    //if err != nil {
-    //	t.Fatal(err)
-    //}
-    //fmt.Printf(tree.ToGraphViz("first program"))
+	//pruned := tree.Map(Compose(
+	//	Compact[grammar.Element],
+	//	PromoteSingleChild[grammar.Element],
+	//	DropOrphanNonTerminal[grammar.Element]))
+	pruned := tree.Map(DropOrphanNonTerminal[grammar.Element])
+	println(GraphViz(pruned, "x + y (drop orphan)"))
+
+	//pruned = pruned.Map(Compact[grammar.Element])
+	//println(GraphViz(pruned, "x + y (compact)"))
+
+	pruned = pruned.Map(PromoteSingleChild[grammar.Element])
+	println(GraphViz(pruned, "x + y (promote single child)"))
+
+	//tree = tree.Map(DropOrphanNonTerminal[grammar.Element])
+	//println(GraphViz(tree, "x + y (drop orphan)"))
+
+	//tree, err := g.ParseTextFromStart(
+	//	`let x := 1000;
+	//	 let y := 2000;
+	//    x = x + 5 * (4 + y / 2);
+	//	 y = y + x;`,
+	//)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//fmt.Printf(tree.GraphViz("first program"))
 }
 
 //func TestSimpleParser(t *testing.T) {
@@ -36,7 +57,7 @@ func TestSimpleParser(t *testing.T) {
 //	if err != nil {
 //		t.Fatal(err)
 //	}
-//	fmt.Printf(tree.ToGraphViz("first program"))
+//	fmt.Printf(tree.GraphViz("first program"))
 //}
 
 //func testGrammar() *Grammar {
@@ -130,19 +151,19 @@ func TestSimpleParser(t *testing.T) {
 //	)
 //}
 
-func testSimpleGrammar() *Grammar {
-    rules := []Rule{
-        {"e", [][]string{{"t", "e'"}}},
-        {"e'", [][]string{{"PLUS", "t", "e'"}, {}}},
-        {"t", [][]string{{"f", "t'"}}},
-        {"t'", [][]string{{"TIME", "f", "t'"}, {}}},
-        {"f", [][]string{{"ID"}, {"OPEN", "e", "CLOSE"}}},
-        {"PLUS", [][]string{{"\\+"}}},
-        {"TIME", [][]string{{"\\*"}}},
-        {"OPEN", [][]string{{"\\("}}},
-        {"CLOSE", [][]string{{"\\)"}}},
-        {"ID", [][]string{{"[_a-zA-Z][_a-zA-Z0-9]*"}}},
-        {"SPC", [][]string{{"\\s+"}, {"#Ignore"}}},
-    }
-    return NewGrammar("test_simple_grammar", rules)
+func testSimpleGrammar() *grammar.Grammar {
+	rules := []grammar.Rule{
+		{"e", [][]string{{"t", "e'"}}},
+		{"e'", [][]string{{"PLUS", "t", "e'"}, {}}},
+		{"t", [][]string{{"f", "t'"}}},
+		{"t'", [][]string{{"TIME", "f", "t'"}, {}}},
+		{"f", [][]string{{"ID"}, {"OPEN", "e", "CLOSE"}}},
+		{"PLUS", [][]string{{"\\+"}}},
+		{"TIME", [][]string{{"\\*"}}},
+		{"OPEN", [][]string{{"\\("}}},
+		{"CLOSE", [][]string{{"\\)"}}},
+		{"ID", [][]string{{"[_a-zA-Z][_a-zA-Z0-9]*"}}},
+		{"SPC", [][]string{{"\\s+"}, {"#Ignore"}}},
+	}
+	return grammar.NewGrammar("test_simple_grammar", rules)
 }

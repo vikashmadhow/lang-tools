@@ -8,8 +8,8 @@ import (
 
 func TestX(t *testing.T) {
 	r := NewRegex("x(ab(vw(cd)|(ef))?)|(a(fc)*\\*[a-z0-9ABC---]+)")
-	println(r.Nfa.ToGraphViz("x(ab(vw(cd)|(ef))?)|(a(fc)*\\*[a-z0-9ABC---]+)"))
-	println(r.Dfa.ToGraphViz("x(ab(vw(cd)|(ef))?)|(a(fc)*\\*[a-z0-9ABC---]+)"))
+	println(r.Nfa.GraphViz("x(ab(vw(cd)|(ef))?)|(a(fc)*\\*[a-z0-9ABC---]+)"))
+	println(r.Dfa.GraphViz("x(ab(vw(cd)|(ef))?)|(a(fc)*\\*[a-z0-9ABC---]+)"))
 	//if !r.Match("") {
 	//	t.Error("'' did not match ''")
 	//}
@@ -20,8 +20,8 @@ func TestX(t *testing.T) {
 
 func Test2(t *testing.T) {
 	r := NewRegex("(ab)|(ac)")
-	println(r.Nfa.ToGraphViz("(ab)|(ac)"))
-	println(r.Dfa.ToGraphViz("(ab)|(ac)"))
+	println(r.Nfa.GraphViz("(ab)|(ac)"))
+	println(r.Dfa.GraphViz("(ab)|(ac)"))
 
 	//if !r.Match("") {
 	//	t.Error("'' did not match ''")
@@ -34,7 +34,7 @@ func Test2(t *testing.T) {
 func TestCaptureGroup(t *testing.T) {
 	r := NewRegex("(aab)|(aac)")
 	m := r.Matcher()
-	println(r.Dfa.ToGraphViz("(aab)|(aac)"))
+	println(r.Dfa.GraphViz("(aab)|(aac)"))
 
 	m.Match("aab")
 	for k, v := range m.Groups {

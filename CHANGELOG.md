@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.4.5] - 2025-09-02
+- Simplify interface and method signatures.
+- Parser and lexer refactored into their own packages.
+- `Element` interface now embeds `fmt.Stringer`, which requires that all language
+  elements implement it.
+- LL(1) Parser now produces a proper parse tree.
+- `Tree` struct for representing a parse tree, and, later, syntax trees.
+- Tree mapping functions allow for tree transformation in a functional persistent manner
+  (preserving immutability of the tree).
+- Useful included tree mappers:
+  - `DropOrphanNonTerminal`: drops any leaf of a non-terminal without any children.
+    These leaves typically map a non-terminal to the empty string, thus contributing
+    nothing to the parse tree.
+  - `PromoteSingleChild`: promotes a single child of a parent to be the parent. This
+    removes long single branches from the tree.
+  - `Compact`: remove `nil` children from a branch.
+
 ## [0.4.4] - 2025-09-02
 - Code cleanup and restructuring.
 

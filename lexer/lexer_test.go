@@ -296,13 +296,13 @@ func matchTokens(t1 []*Token, t2 []*Token) (bool, error) {
 	return true, nil
 }
 
-func toString(tokens []*Token) string {
+func String(tokens []*Token) string {
 	var s strings.Builder
 	for _, token := range tokens {
 		//if i > 0 {
 		//	s.WriteString(" ")
 		//}
-		s.WriteString(token.ToString())
+		s.WriteString(token.String())
 	}
 	return s.String()
 }

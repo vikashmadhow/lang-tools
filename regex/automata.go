@@ -135,7 +135,7 @@ func (auto *automata) addTransitions(from state, to map[char]state) *automata {
 	return auto
 }
 
-func (auto *automata) ToGraphViz(title string) string {
+func (auto *automata) GraphViz(title string) string {
 	nodeNames := map[state]string{}
 	if slices.Index(auto.final, auto.start) == -1 {
 		nodeNames[auto.start] = "S"
