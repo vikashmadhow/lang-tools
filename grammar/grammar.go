@@ -3,184 +3,208 @@
 package grammar
 
 import (
-	"fmt"
-	"maps"
-	"slices"
-	"strings"
-	"unicode"
-	"unicode/utf8"
+    "errors"
+    "fmt"
+    "maps"
+    "slices"
+    "strings"
+    "unicode"
+    "unicode/utf8"
 
-	"github.com/vikashmadhow/lang-tools/lexer"
+    "github.com/vikashmadhow/lang-tools/lexer"
 )
 
 type (
-	Grammar struct {
-		Id          string
-		Lexer       *lexer.Lexer
-		Productions []*Production
-		ProdByName  map[string]*Production
-	}
+    Grammar struct {
+        Id          string
+        Lexer       *lexer.Lexer
+        Productions []*Production
+        ProdByName  map[string]*Production
+    }
 
-	Element interface {
-		Terminal() bool
+    Element interface {
+        Terminal() bool
 
-		Empty() bool
-		MatchEmpty() bool
+        Empty() bool
+        MatchEmpty() bool
 
-		First() map[*lexer.TokenType]bool
+        First() map[*lexer.TokenType]bool
 
-		fmt.Stringer
-	}
+        TreePattern() string
+        fmt.Stringer
+    }
 
-	Sentence []Element
+    Sentence struct {
+        Elements  []Element
+        exploring map[Element]bool
+    }
 
-	Production struct {
-		Name       string
-		Alternates []Sentence
-		first      map[*lexer.TokenType]bool
-	}
+    Production struct {
+        Name       string
+        Alternates []Sentence
+        first      map[*lexer.TokenType]bool
+    }
 
-	// Rule makes it easier to define grammar rules with self-reference
-	// and mutually recursive rules. These rules are resolved to production
-	// and token-types on grammar creation.
-	//
-	// Rule names starting with a lower-case letter are considered non-terminals
-	// (productions), while those starting with an upper-case letter are terminals
-	// (token types).
-	//
-	// Example:
-	//
-	// language := []Rule{
-	//   {"e",     [][]string{{"t", "e'"}}},
-	//   {"e'",    [][]string{{"PLUS", "t", "e'"}, {}}},
-	//   {"t",     [][]string{{"f", "t'"}}},
-	//   {"t'",    [][]string{{"TIME", "f", "t'"}, {}}},
-	//   {"f",     [][]string{{"ID"}, {"OPEN", "e", "CLOSE"}}},
-	//   {"PLUS",  [][]string{{"\\+"}}},
-	//   {"TIME",  [][]string{{"\\*"}}},
-	//   {"OPEN",  [][]string{{"\\("}}},
-	//   {"CLOSE", [][]string{{"\\)"}}},
-	//   {"ID",    [][]string{{"[_a-zA-Z][_a-zA-Z0-9]*"}}},
-	// }
-	Rule struct {
-		Name  string
-		Match [][]string
-	}
+    // Rule makes it easier to define grammar rules with self-reference
+    // and mutually recursive rules. These rules are resolved to production
+    // and token-types on grammar creation.
+    //
+    // Rule names starting with a lower-case letter are considered non-terminals
+    // (productions), while those starting with an upper-case letter are terminals
+    // (token types).
+    //
+    // Example:
+    //
+    // language := []Rule{
+    //   {"e",     [][]string{{"t", "e'"}}},
+    //   {"e'",    [][]string{{"PLUS", "t", "e'"}, {}}},
+    //   {"t",     [][]string{{"f", "t'"}}},
+    //   {"t'",    [][]string{{"TIME", "f", "t'"}, {}}},
+    //   {"f",     [][]string{{"ID"}, {"OPEN", "e", "CLOSE"}}},
+    //   {"PLUS",  [][]string{{"\\+"}}},
+    //   {"TIME",  [][]string{{"\\*"}}},
+    //   {"OPEN",  [][]string{{"\\("}}},
+    //   {"CLOSE", [][]string{{"\\)"}}},
+    //   {"ID",    [][]string{{"[_a-zA-Z][_a-zA-Z0-9]*"}}},
+    // }
+    Rule struct {
+        Name  string
+        Match [][]string
+    }
 
-	//Sequence struct {
-	//	Elements      []Sentence
-	//	TreeRetention TreeRetention
-	//	first         map[string]bool
-	//}
-	//
-	//Choice struct {
-	//	Alternates    []Sentence
-	//	TreeRetention TreeRetention
-	//	first         map[string]bool
-	//}
-	//
-	//Optional struct {
-	//	Sentence      Sentence
-	//	TreeRetention TreeRetention
-	//}
-	//
-	//ZeroOrMore struct {
-	//	Sentence      Sentence
-	//	TreeRetention TreeRetention
-	//}
-	//
-	//OneOrMore struct {
-	//	Sentence      Sentence
-	//	TreeRetention TreeRetention
-	//}
-	//
-	//Repeat struct {
-	//	Min, Max      int
-	//	Sentence      Sentence
-	//	TreeRetention TreeRetention
-	//	first         map[string]bool
-	//	follow        map[string]bool
-	//}
+    //Sequence struct {
+    //	Elements      []Sentence
+    //	TreeRetention TreeRetention
+    //	first         map[string]bool
+    //}
+    //
+    //Choice struct {
+    //	Alternates    []Sentence
+    //	TreeRetention TreeRetention
+    //	first         map[string]bool
+    //}
+    //
+    //Optional struct {
+    //	Sentence      Sentence
+    //	TreeRetention TreeRetention
+    //}
+    //
+    //ZeroOrMore struct {
+    //	Sentence      Sentence
+    //	TreeRetention TreeRetention
+    //}
+    //
+    //OneOrMore struct {
+    //	Sentence      Sentence
+    //	TreeRetention TreeRetention
+    //}
+    //
+    //Repeat struct {
+    //	Min, Max      int
+    //	Sentence      Sentence
+    //	TreeRetention TreeRetention
+    //	first         map[string]bool
+    //	follow        map[string]bool
+    //}
 )
 
 func (s Sentence) Terminal() bool {
-	if len(s) == 0 {
-		return true
-	} else if len(s) == 1 && s[0].Terminal() {
-		return true
-	}
-	return false
+    if len(s.Elements) == 0 {
+        return true
+    } else if len(s.Elements) == 1 && s.Elements[0].Terminal() {
+        return true
+    }
+    return false
 }
 
 func (s Sentence) Empty() bool {
-	return len(s) == 0 || (len(s) == 1 && s[0].Empty())
+    return len(s.Elements) == 0 || (len(s.Elements) == 1 && s.Elements[0].Empty())
 }
 
 func (s Sentence) MatchEmpty() bool {
-	for _, e := range s {
-		if !e.MatchEmpty() {
-			return false
-		}
-	}
-	return true
+    for _, e := range s.Elements {
+        if s.exploring[e] {
+            panic("recursion detected involving " + e.String())
+        }
+        result := func() bool {
+            s.exploring[e] = true
+            defer delete(s.exploring, e)
+            if !e.MatchEmpty() {
+                return false
+            }
+            return true
+        }()
+        if !result {
+            return false
+        }
+    }
+    return true
 }
 
 func (s Sentence) First() map[*lexer.TokenType]bool {
-	first := make(map[*lexer.TokenType]bool)
-	for _, e := range s {
-		maps.Insert(first, maps.All(e.First()))
-		if !e.MatchEmpty() {
-			break
-		}
-	}
-	return first
+    first := make(map[*lexer.TokenType]bool)
+    for _, e := range s.Elements {
+        maps.Insert(first, maps.All(e.First()))
+        if !e.MatchEmpty() {
+            break
+        }
+    }
+    return first
+}
+
+func (s Sentence) TreePattern() string {
+    return "!sentence!"
 }
 
 func (s Sentence) String() string {
-	var str strings.Builder
-	for i, e := range s {
-		if i > 0 {
-			str.WriteString(" ")
-		}
-		str.WriteString(e.String())
-	}
-	return str.String()
+    var str strings.Builder
+    for i, e := range s.Elements {
+        if i > 0 {
+            str.WriteString(" ")
+        }
+        str.WriteString(e.String())
+    }
+    return str.String()
 }
 
 func (p *Production) Terminal() bool {
-	return false
+    return false
 }
 
 func (p *Production) Empty() bool {
-	for _, alt := range p.Alternates {
-		if alt.Empty() {
-			return true
-		}
-	}
-	return false
+    for _, alt := range p.Alternates {
+        if !alt.Empty() {
+            return false
+        }
+    }
+    return true
 }
 
 func (p *Production) MatchEmpty() bool {
-	for _, alt := range p.Alternates {
-		if alt.MatchEmpty() {
-			return true
-		}
-	}
-	return false
+    for _, alt := range p.Alternates {
+        if alt.MatchEmpty() {
+            return true
+        }
+    }
+    return false
 }
 
 func (p *Production) First() map[*lexer.TokenType]bool {
-	if p.first == nil {
-		p.first = make(map[*lexer.TokenType]bool)
-		for _, alt := range p.Alternates {
-			maps.Insert(p.first, maps.All(alt.First()))
-		}
-	}
-	return p.first
+    if p.first == nil {
+        p.first = make(map[*lexer.TokenType]bool)
+        for _, alt := range p.Alternates {
+            maps.Insert(p.first, maps.All(alt.First()))
+        }
+    }
+    return p.first
+}
+
+func (p *Production) TreePattern() string {
+    return p.Name
 }
 
 func (p *Production) String() string {
-	return p.Name
+    return p.Name
 }
 
 // --- Production  --- //
@@ -435,56 +459,72 @@ func (p *Production) String() string {
 //	return "(" + r.Sentence.ToString() + "){" + strconv.Itoa(r.Min) + "," + strconv.Itoa(r.Max) + "}"
 //}
 
-func NewGrammar(name string, rules []Rule) *Grammar {
-	tokenTypes, prods, mods := resolve(rules)
-	lex := lexer.NewLexer(slices.Collect(maps.Values(tokenTypes))...)
-	if mods != nil {
-		lex.Modulator(mods...)
-	}
-	return &Grammar{
-		name,
-		lex,
-		slices.Collect(maps.Values(prods)),
-		prods,
-	}
+func NewGrammar(name string, rules []Rule) (*Grammar, error) {
+    tokenTypes, prods, mods, err := resolve(rules)
+    if err != nil {
+        return nil, err
+    }
+    lex := lexer.NewLexer(tokenTypes...)
+    if mods != nil {
+        lex.Modulator(mods...)
+    }
+    return &Grammar{
+        name,
+        lex,
+        slices.Collect(maps.Values(prods)),
+        prods,
+    }, nil
 }
 
-func resolve(rules []Rule) (map[string]*lexer.TokenType, map[string]*Production, []lexer.Modulator) {
-	var tokens = make(map[string]*lexer.TokenType)
-	var prods = make(map[string]*Production)
-	var modulators []lexer.Modulator
-	for _, r := range rules {
-		if startsWithUpper(r.Name) {
-			tokens[r.Name] = lexer.NewTokenType(r.Name, r.Match[0][0])
-			if len(r.Match) > 1 && r.Match[1][0] == "#Ignore" {
-				modulators = append(modulators, lexer.Ignore(tokens[r.Name]))
-			}
-		} else {
-			prods[r.Name] = &Production{Name: r.Name, Alternates: nil}
-		}
-	}
+func resolve(rules []Rule) ([]*lexer.TokenType, map[string]*Production, []lexer.Modulator, error) {
+    var tokens []*lexer.TokenType
+    tokenMap := make(map[string]*lexer.TokenType)
+    var prods = make(map[string]*Production)
+    var modulators []lexer.Modulator
+    for _, r := range rules {
+        if startsWithUpper(r.Name) {
+            token := lexer.NewTokenType(r.Name, r.Match[0][0])
+            tokens = append(tokens, token)
+            tokenMap[r.Name] = token
+            if len(r.Match) > 1 && r.Match[1][0] == "#Ignore" {
+                modulators = append(modulators, lexer.Ignore(token))
+            }
+        } else {
+            prods[r.Name] = &Production{Name: r.Name, Alternates: nil}
+        }
+    }
 
-	for _, r := range rules {
-		if !startsWithUpper(r.Name) {
-			var alternates []Sentence
-			for _, alt := range r.Match {
-				var sentence Sentence
-				for _, symbol := range alt {
-					if startsWithUpper(symbol) {
-						sentence = append(sentence, tokens[symbol])
-					} else {
-						sentence = append(sentence, prods[symbol])
-					}
-				}
-				alternates = append(alternates, sentence)
-			}
-			prods[r.Name].Alternates = alternates
-		}
-	}
-	return tokens, prods, modulators
+    var err error
+resolve:
+    for _, r := range rules {
+        if !startsWithUpper(r.Name) {
+            var alternates []Sentence
+            for _, alt := range r.Match {
+                sentence := Sentence{Elements: nil, exploring: make(map[Element]bool)}
+                for _, symbol := range alt {
+                    if startsWithUpper(symbol) {
+                        if _, ok := tokenMap[symbol]; !ok {
+                            err = errors.New("token " + symbol + " not defined")
+                            break resolve
+                        }
+                        sentence.Elements = append(sentence.Elements, tokenMap[symbol])
+                    } else {
+                        if _, ok := prods[symbol]; !ok {
+                            err = errors.New("production " + symbol + " not defined")
+                            break resolve
+                        }
+                        sentence.Elements = append(sentence.Elements, prods[symbol])
+                    }
+                }
+                alternates = append(alternates, sentence)
+            }
+            prods[r.Name].Alternates = alternates
+        }
+    }
+    return tokens, prods, modulators, err
 }
 
 func startsWithUpper(s string) bool {
-	first, _ := utf8.DecodeRuneInString(s)
-	return unicode.IsUpper(first)
+    first, _ := utf8.DecodeRuneInString(s)
+    return unicode.IsUpper(first)
 }

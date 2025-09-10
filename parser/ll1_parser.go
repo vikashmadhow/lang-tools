@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/vikashmadhow/lang-tools/grammar"
@@ -38,13 +39,13 @@ func NewLL1Parser(g *grammar.Grammar, start *grammar.Production) *LL1Parser {
 		changed = false
 		for _, p := range g.Productions {
 			for _, alt := range p.Alternates {
-				for i := len(alt) - 1; i >= 0; i-- {
-					if i == len(alt)-1 {
-						changed = changed || addFollow(followMap, alt[i], p, false)
+				for i := len(alt.Elements) - 1; i >= 0; i-- {
+					if i == len(alt.Elements)-1 {
+						changed = changed || addFollow(followMap, alt.Elements[i], p, false)
 					} else {
-						changed = changed || addFollow(followMap, alt[i], alt[i+1], true)
-						if alt[i+1].MatchEmpty() {
-							changed = changed || addFollow(followMap, alt[i], alt[i+1], false)
+						changed = changed || addFollow(followMap, alt.Elements[i], alt.Elements[i+1], true)
+						if alt.Elements[i+1].MatchEmpty() {
+							changed = changed || addFollow(followMap, alt.Elements[i], alt.Elements[i+1], false)
 						}
 					}
 				}
@@ -54,20 +55,22 @@ func NewLL1Parser(g *grammar.Grammar, start *grammar.Production) *LL1Parser {
 
 	table := make(map[grammar.Element]map[*lexer.TokenType]grammar.Sentence)
 	for _, p := range g.Productions {
-		matchEmpty := false
+		empty := false
 		table[p] = make(map[*lexer.TokenType]grammar.Sentence)
 		for _, alt := range p.Alternates {
-			if alt.MatchEmpty() {
-				matchEmpty = true
+			if alt.Empty() {
+				empty = true
 			} else {
 				for t := range alt.First() {
 					table[p][t] = alt
 				}
 			}
 		}
-		if matchEmpty {
+		if empty {
 			for t := range followMap[p] {
-				table[p][t] = grammar.Sentence{}
+				table[p][t] = grammar.Sentence{
+					Elements: []grammar.Element{},
+				}
 			}
 		}
 	}
@@ -76,6 +79,47 @@ func NewLL1Parser(g *grammar.Grammar, start *grammar.Production) *LL1Parser {
 		Start:         start,
 		LL1ParseTable: table,
 		follow:        followMap,
+	}
+}
+
+func (p *LL1Parser) PrintTable() {
+	var tokens []*lexer.TokenType
+	for _, tableTokens := range p.follow {
+		for t := range tableTokens {
+			if !slices.Contains(tokens, t) {
+				tokens = append(tokens, t)
+			}
+		}
+	}
+
+	const space = 10
+	fmt.Printf("%"+strconv.Itoa(space)+"s\t", "Production")
+	for _, t := range tokens {
+		fmt.Printf(" %-"+strconv.Itoa(space)+"s\t", t)
+	}
+	fmt.Println()
+	for g, _ := range p.LL1ParseTable {
+		fmt.Printf("%"+strconv.Itoa(space)+"s\t", g)
+		leftSpace := space + 1
+		for _, t := range tokens {
+			if s, ok := p.LL1ParseTable[g][t]; ok {
+				fmt.Printf(" %-"+strconv.Itoa(space)+"s\t", s)
+				//if s.Elements == nil {
+				//	fmt.Printf(" %-"+strconv.Itoa(space)+"s |", "%")
+				//} else {
+				//	for i, e := range s.Elements {
+				//		if i > 0 {
+				//			fmt.Printf("\n %-"+strconv.Itoa(leftSpace)+"s", "")
+				//		}
+				//		fmt.Printf(" %-"+strconv.Itoa(space)+"s |", e)
+				//	}
+				//}
+			} else {
+				fmt.Printf(" %-"+strconv.Itoa(space)+"s\t", "")
+			}
+			leftSpace += space + 3
+		}
+		fmt.Println()
 	}
 }
 
@@ -108,35 +152,50 @@ func addFollow(
 	return changed
 }
 
-func (p *LL1Parser) Parse(input io.Reader) (*Tree[grammar.Element], error) {
-	start := NewParseTree(p.Start)
-	stack := []*Tree[grammar.Element]{start, NewParseTree(lexer.EOFType)}
-	for token := range p.Grammar.Lexer.LexSeq(input) {
-		for token.Type != stack[0].Node {
+func (p *LL1Parser) Parse(input io.Reader) (*grammar.Tree, error) {
+	//for el, tokens := range p.follow {
+	//	fmt.Printf("%10s\t", el)
+	//	for t := range tokens {
+	//		fmt.Printf("%-10s\t", t)
+	//	}
+	//	fmt.Println()
+	//}
+
+	start := grammar.NewParseTree(p.Start)
+	stack := []*grammar.Tree{start, grammar.NewParseTree(lexer.EOFType)}
+	for token, err := range p.Grammar.Lexer.LexSeq(input) {
+		if err != nil {
+			return start, err
+		}
+		//fmt.Println("Token:", token)
+		for len(stack) > 0 && token.Type != stack[0].Node {
 			top := stack[0]
 			stack = stack[1:]
 
-			sentence := p.LL1ParseTable[top.Node.(grammar.Element)][token.Type]
-			if sentence == nil {
+			//fmt.Println("Top:", top)
+			sentence, ok := p.LL1ParseTable[top.Node.(grammar.Element)][token.Type]
+			//fmt.Println("Expand to:", sentence)
+
+			if !ok {
 				return nil, fmt.Errorf("no production for %q -> %q", top.Node, token.Type.Id)
 			}
 			top.Children = parseTree(sentence)
 			stack = slices.Insert(stack, 0, top.Children...)
 		}
-		stack[0].Children = append(stack[0].Children, NewParseTree(token))
+		stack[0].Children = append(stack[0].Children, grammar.NewParseTree(token))
 		stack = stack[1:]
 	}
 	return start, nil
 }
 
-func (p *LL1Parser) ParseText(input string) (*Tree[grammar.Element], error) {
+func (p *LL1Parser) ParseText(input string) (*grammar.Tree, error) {
 	return p.Parse(strings.NewReader(input))
 }
 
-func parseTree(sentence grammar.Sentence) []*Tree[grammar.Element] {
-	var trees []*Tree[grammar.Element]
-	for _, s := range sentence {
-		trees = append(trees, NewParseTree(s))
+func parseTree(sentence grammar.Sentence) []*grammar.Tree {
+	var trees []*grammar.Tree
+	for _, s := range sentence.Elements {
+		trees = append(trees, grammar.NewParseTree(s))
 	}
 	return trees
 }

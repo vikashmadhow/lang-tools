@@ -1,8 +1,10 @@
 package parser
 
 import (
+	"context"
 	"testing"
 
+	"github.com/goccy/go-graphviz"
 	"github.com/vikashmadhow/lang-tools/grammar"
 )
 
@@ -12,24 +14,74 @@ func TestSimpleParser(t *testing.T) {
 	g := testSimpleGrammar()
 	parser := NewLL1Parser(g, g.ProdByName["e"])
 
-	tree, err := parser.ParseText("x + y")
+	expr := "x * y + z"
+	tree, err := parser.ParseText(expr)
 	if err != nil {
 		println(err)
 	}
-	println(GraphViz(tree, "x + y"))
+	println(tree.GraphViz(expr))
 
 	//pruned := tree.Map(Compose(
 	//	Compact[grammar.Element],
 	//	PromoteSingleChild[grammar.Element],
 	//	DropOrphanNonTerminal[grammar.Element]))
-	pruned := tree.Map(DropOrphanNonTerminal[grammar.Element])
-	println(GraphViz(pruned, "x + y (drop orphan)"))
+	pruned := tree.Map(grammar.DropOrphanNonTerminal)
+	//println(GraphViz(pruned, expr+" (drop orphan)"))
 
 	//pruned = pruned.Map(Compact[grammar.Element])
 	//println(GraphViz(pruned, "x + y (compact)"))
 
-	pruned = pruned.Map(PromoteSingleChild[grammar.Element])
-	println(GraphViz(pruned, "x + y (promote single child)"))
+	pruned = pruned.Map(grammar.PromoteSingleChild)
+	println(pruned.GraphViz(expr + " (promote single child)"))
+
+	expr = "x + y * z"
+	tree, err = parser.ParseText(expr)
+	if err != nil {
+		println(err)
+	}
+	//println(GraphViz(tree, expr))
+
+	//pruned := tree.Map(Compose(
+	//	Compact[grammar.Element],
+	//	PromoteSingleChild[grammar.Element],
+	//	DropOrphanNonTerminal[grammar.Element]))
+	pruned = tree.Map(grammar.DropOrphanNonTerminal)
+	//println(GraphViz(pruned, expr+" (drop orphan)"))
+
+	//pruned = pruned.Map(Compact[grammar.Element])
+	//println(GraphViz(pruned, "x + y (compact)"))
+
+	pruned = pruned.Map(grammar.PromoteSingleChild)
+	println(pruned.GraphViz(expr + " (promote single child)"))
+
+	ctx := context.Background()
+	viz, err := graphviz.New(ctx)
+	if err != nil {
+		panic(err)
+	}
+	defer viz.Close()
+
+	dot := pruned.GraphViz(expr + " (promote single child)")
+	graph, err := graphviz.ParseBytes([]byte(dot))
+	if err != nil {
+		panic(err)
+	}
+
+	//var buf bytes.Buffer
+	//if err := viz.Render(ctx, graph, graphviz.PNG, &buf); err != nil {
+	//	panic(err)
+	//}
+	//
+	//// 2. get as image.Image instance
+	//image, err := viz.RenderImage(ctx, graph)
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	// 3. write to file directly
+	if err := viz.RenderFilename(ctx, graph, graphviz.PNG, "c:/temp/lang/graph.png"); err != nil {
+		panic(err)
+	}
 
 	//tree = tree.Map(DropOrphanNonTerminal[grammar.Element])
 	//println(GraphViz(tree, "x + y (drop orphan)"))
@@ -152,6 +204,14 @@ func TestSimpleParser(t *testing.T) {
 //}
 
 func testSimpleGrammar() *grammar.Grammar {
+	// e  -> t e'
+	// e' -> + t e
+	//    |
+	// t  -> f t'
+	// t' -> * f t'
+	//    |
+	// f  -> ID
+	//    |  ( e )
 	rules := []grammar.Rule{
 		{"e", [][]string{{"t", "e'"}}},
 		{"e'", [][]string{{"PLUS", "t", "e'"}, {}}},
@@ -165,5 +225,9 @@ func testSimpleGrammar() *grammar.Grammar {
 		{"ID", [][]string{{"[_a-zA-Z][_a-zA-Z0-9]*"}}},
 		{"SPC", [][]string{{"\\s+"}, {"#Ignore"}}},
 	}
-	return grammar.NewGrammar("test_simple_grammar", rules)
+	g, err := grammar.NewGrammar("test_simple_grammar", rules)
+	if err != nil {
+		panic(err)
+	}
+	return g
 }

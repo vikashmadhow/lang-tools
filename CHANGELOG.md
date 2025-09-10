@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.6] - 2025-09-09
+- Subtrees can be searched by specifying a set of patterns consisting of language
+  elements (tokens-types and non-terminals) and their relationships: PARENT, ANCESTOR 
+  or SIBLING. E.g., `e << f - d < a << x` search for a subtree that has a root of `e`
+  which is an ancestor of `f`, which has a sibling `d` which is, in turn, a parent 
+  of `a` and, finally, which is an ancestor of `x`.
+- Matched subtrees can be transformed by applying a mapping function to them.
+- Tree.Map function provides a functionally persistent path from the root of the tree
+  to the node being mapped. This path is useful for more complex tree transformations.
+- Fully functional LL(1) parser.
+- An LL(1) micro-language for testing.
+- Detection of left-recursion when constructing LL(1) parsing table.
+
 ## [0.4.5] - 2025-09-02
 - Simplify interface and method signatures.
 - Parser and lexer refactored into their own packages.

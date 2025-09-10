@@ -8,7 +8,7 @@ import (
 
 type (
 	Parser interface {
-		Parse(input io.Reader) (*Tree[grammar.Element], error)
-		ParseText(input string) (*Tree[grammar.Element], error)
+		Parse(input io.Reader) (*grammar.Tree, error)
+		ParseText(input string) (*grammar.Tree, error)
 	}
 )
