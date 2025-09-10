@@ -98,26 +98,14 @@ func (p *LL1Parser) PrintTable() {
 		fmt.Printf(" %-"+strconv.Itoa(space)+"s\t", t)
 	}
 	fmt.Println()
-	for g, _ := range p.LL1ParseTable {
+	for g := range p.LL1ParseTable {
 		fmt.Printf("%"+strconv.Itoa(space)+"s\t", g)
-		leftSpace := space + 1
 		for _, t := range tokens {
 			if s, ok := p.LL1ParseTable[g][t]; ok {
 				fmt.Printf(" %-"+strconv.Itoa(space)+"s\t", s)
-				//if s.Elements == nil {
-				//	fmt.Printf(" %-"+strconv.Itoa(space)+"s |", "%")
-				//} else {
-				//	for i, e := range s.Elements {
-				//		if i > 0 {
-				//			fmt.Printf("\n %-"+strconv.Itoa(leftSpace)+"s", "")
-				//		}
-				//		fmt.Printf(" %-"+strconv.Itoa(space)+"s |", e)
-				//	}
-				//}
 			} else {
 				fmt.Printf(" %-"+strconv.Itoa(space)+"s\t", "")
 			}
-			leftSpace += space + 3
 		}
 		fmt.Println()
 	}

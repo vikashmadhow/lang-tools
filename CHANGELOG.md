@@ -1,8 +1,12 @@
 # Changelog
 
+## [0.4.7] - 2025-09-10
+- Test minimal LL(1) language extended with function definitions, function calls, 
+  variable declarations, and comparison operators.
+
 ## [0.4.6] - 2025-09-09
 - Subtrees can be searched by specifying a set of patterns consisting of language
-  elements (tokens-types and non-terminals) and their relationships: PARENT, ANCESTOR 
+  elements (tokens-types and non-terminals) and their relationships: PARENT, ANCESTOR, 
   or SIBLING. E.g., `e << f - d < a << x` search for a subtree that has a root of `e`
   which is an ancestor of `f`, which has a sibling `d` which is, in turn, a parent 
   of `a` and, finally, which is an ancestor of `x`.
