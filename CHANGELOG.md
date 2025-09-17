@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0] - 2025-09-17
+- New lexer implementation that can be used for tokenization as well as lexing.
+  - Tokenization and splitting support.
+  - Fixes longest-string identification for patterns which an optional suffix
+    (e.g. xyz(ab)*)
+  - Read buffer is dynamically increased when there are not enough characters
+    for the lexer to make a decision on emitting a token.
+- `Matcher` keeps full and partial matches.
+- Special token types now use code points in the Unicode PUA to reduce possibility
+  of clash with regular characters.
+- Tree matching cleanup.
+
 ## [0.4.7] - 2025-09-10
 - Test minimal LL(1) language extended with function definitions, function calls, 
   variable declarations, and comparison operators.
@@ -115,7 +127,7 @@
 - Filtering, mapping, and flat-mapping can now work on both the pull and push versions of iter.Seq
   and iter.Seq2.
 - Lexer `Lex` methods for returning a push version of iter.Seq2, which is simple to iterate over.
-  However, these version does not allow for token pushback.
+  However, these versions do not support token pushback.
 
 ## [0.2.0] - 2024-12-30
 - A set of utility functions for filtering, mapping and flat-mapping over iter.Seq and iter.Seq2.

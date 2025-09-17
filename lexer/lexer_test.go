@@ -40,7 +40,7 @@ func TestBasicLexer(t *testing.T) {
 		{l.Type("EQ"), "=", 1, 7},
 		{l.Type("SPC"), "  ", 1, 8},
 		{l.Type("INT"), "1000", 1, 10},
-		{EOFType, "$", 1, 14},
+		{TextEndType, "", 1, 14},
 	})
 
 	if err != nil {
@@ -58,7 +58,7 @@ func TestLexerError(t *testing.T) {
 	)
 
 	var tokens []*Token
-	tokenSeq := l.LexText("let x? =  1000")
+	tokenSeq := l.LexText("let x?# =  1000")
 	for token, e := range seq.Push2(tokenSeq.Next, tokenSeq.Stop) {
 		if e != nil {
 			println(e.Error())
@@ -124,7 +124,7 @@ func TestMultiline(t *testing.T) {
 		{l.Type("TIME"), "*", 2, 19},
 		{l.Type("PLUS"), "-", 2, 20},
 		{l.Type("INT"), "2000", 2, 21},
-		{EOFType, "$", 2, 25},
+		{TextEndType, "", 2, 25},
 	})
 
 	if err != nil {
@@ -146,17 +146,17 @@ func TestUnicode(t *testing.T) {
 	l.Modulator(Ignore(l.Type("SPC")))
 
 	var tokens []*Token
-	for token := range l.LexTextSeq(`let A日本語 = 1000`) {
+	for token := range l.LexTextSeq(`let A日本語日本語 = 1000`) {
 		tokens = append(tokens, token)
 	}
 
 	fmt.Println(tokens)
 	_, err := matchTokens(tokens, []*Token{
 		{l.Type("LET"), "let", 1, 1},
-		{l.Type("ID"), "A日本語", 1, 5},
-		{l.Type("EQ"), "=", 1, 10},
-		{l.Type("INT"), "1000", 1, 12},
-		{EOFType, "$", 1, 16},
+		{l.Type("ID"), "A日本語日本語", 1, 5},
+		{l.Type("EQ"), "=", 1, 13},
+		{l.Type("INT"), "1000", 1, 15},
+		{TextEndType, "", 1, 19},
 	})
 
 	if err != nil {
@@ -211,7 +211,7 @@ func TestReverseAlternate(t *testing.T) {
 	l.Modulator(func() Modulator {
 		var stream []seq.Pair[*Token, error] = nil
 		return func(t *Token, err error) []seq.Pair[*Token, error] {
-			if t.Type == EOFType {
+			if t.Type == TextEndType {
 				slices.Reverse(stream)
 				return stream
 			} else {
@@ -276,7 +276,7 @@ func TestEndError(t *testing.T) {
 		{l.Type("ID"), "x", 1, 5},
 		{l.Type("EQ"), ":=", 1, 7},
 		{l.Type("INT"), "1000", 1, 10},
-		{EOFType, "$", 1, 14},
+		{TextEndType, "$", 1, 14},
 	})
 
 	if err != nil {

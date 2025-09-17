@@ -31,11 +31,11 @@ func Ignore(types ...*TokenType) Modulator {
 
 // Reverse is an example Modulator that reverses the token stream. It works by holding
 // all tokens from the stream in a slice which it then reverses when the Lexer sends the
-// EOF token at the end of lexing.
+// TextEnd token at the end of lexing.
 func Reverse() Modulator {
 	var stream []seq.Pair[*Token, error] = nil
 	return func(t *Token, err error) []seq.Pair[*Token, error] {
-		if t.Type == EOFType {
+		if t.Type == TextEndType {
 			slices.Reverse(stream)
 			return stream
 		} else {

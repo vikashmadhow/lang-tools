@@ -23,7 +23,7 @@ type (
 
 func NewLL1Parser(g *grammar.Grammar, start *grammar.Production) *LL1Parser {
 	followMap := make(map[grammar.Element]map[*lexer.TokenType]bool)
-	followMap[start] = map[*lexer.TokenType]bool{lexer.EOFType: true}
+	followMap[start] = map[*lexer.TokenType]bool{lexer.TextEndType: true}
 
 	// Algorithm to compute FOLLOW, adapted from Aho and Ullman.
 	// repeat
@@ -150,7 +150,7 @@ func (p *LL1Parser) Parse(input io.Reader) (*grammar.Tree, error) {
 	//}
 
 	start := grammar.NewParseTree(p.Start)
-	stack := []*grammar.Tree{start, grammar.NewParseTree(lexer.EOFType)}
+	stack := []*grammar.Tree{start, grammar.NewParseTree(lexer.TextEndType)}
 	for token, err := range p.Grammar.Lexer.LexSeq(input) {
 		if err != nil {
 			return start, err
@@ -173,7 +173,7 @@ func (p *LL1Parser) Parse(input io.Reader) (*grammar.Tree, error) {
 		stack[0].Children = append(stack[0].Children, grammar.NewParseTree(token))
 		stack = stack[1:]
 	}
-	return start, nil
+	return start.Map(grammar.CleanUp), nil
 }
 
 func (p *LL1Parser) ParseText(input string) (*grammar.Tree, error) {

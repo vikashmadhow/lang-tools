@@ -14,7 +14,50 @@ func TestMinCGrammar(t *testing.T) {
 
 	//parser.PrintTable()
 
-	tree, err := parser.ParseText(`
+	tree, err := parser.ParseText(TestProg1)
+	if err != nil {
+		println(err.Error())
+	} else {
+		fmt.Println(tree.GraphViz("Test min C prog"))
+	}
+
+	pruned := tree.Map(grammar.DropOrphanNonTerminal)
+	//println(GraphViz(pruned, expr+" (drop orphan)"))
+
+	//pruned = pruned.Map(Compact[grammar.Element])
+	//println(GraphViz(pruned, "x + y (compact)"))
+
+	pruned = pruned.Map(grammar.PromoteSingleChild)
+	println(pruned.GraphViz("Pruned"))
+}
+
+func TestRestructureTree(t *testing.T) {
+	// Program structure
+	g := minCGrammar()
+	parser := NewLL1Parser(g, g.ProdByName["program"])
+
+	//parser.PrintTable()
+
+	tree, err := parser.ParseText(TestProg1)
+	if err != nil {
+		println(err.Error())
+	}
+
+	tree = tree.Map(grammar.DropOrphanNonTerminal)
+	tree = tree.Map(grammar.PromoteSingleChild)
+	println(tree.GraphViz("Pruned"))
+
+	tree = tree.MapMatch(func(t *grammar.Tree, result *grammar.MatchResult) *grammar.Tree {
+		return &grammar.Tree{
+			Node:     t.Children[0].Node,
+			Children: t.Children[1:],
+		}
+	}, [][]string{{"stmt", grammar.PARENT, "FUNC"}})
+	println(tree.GraphViz("Transformed"))
+
+}
+
+const TestProg1 = `
     var global := 1000;
 
     func main() { 
@@ -35,20 +78,4 @@ func TestMinCGrammar(t *testing.T) {
             return n * call factorial(n - 1);
         }
     }
-    `)
-	if err != nil {
-		println(err.Error())
-	} else {
-		fmt.Println(tree.GraphViz("Test min C prog"))
-	}
-
-	pruned := tree.Map(grammar.DropOrphanNonTerminal)
-	//println(GraphViz(pruned, expr+" (drop orphan)"))
-
-	//pruned = pruned.Map(Compact[grammar.Element])
-	//println(GraphViz(pruned, "x + y (compact)"))
-
-	pruned = pruned.Map(grammar.PromoteSingleChild)
-	println(pruned.GraphViz("Pruned"))
-
-}
+    `

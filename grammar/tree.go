@@ -4,6 +4,7 @@ import (
 	"iter"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 type (
@@ -45,6 +46,8 @@ type (
 		Paths    []*Path
 		Bindings map[string][]*Tree
 	}
+
+	MatchPattern [][]string
 )
 
 const (
@@ -116,7 +119,15 @@ func (tree *Tree) MapWithPath(mapper Map, path *Path) *Tree {
 	}
 }
 
-func (tree *Tree) MapMatch(mapper MatchMap, pattern [][]string) *Tree {
+func ParsePattern(pattern string) MatchPattern {
+	var pat MatchPattern
+	for _, line := range strings.Split(pattern, "\n") {
+		pat = append(pat, strings.Split(line, " "))
+	}
+	return pat
+}
+
+func (tree *Tree) MapMatch(mapper MatchMap, pattern MatchPattern) *Tree {
 	// build tree index
 	index := tree.BuildIndex()
 
@@ -141,7 +152,7 @@ func (tree *Tree) MapMatch(mapper MatchMap, pattern [][]string) *Tree {
 	}
 }
 
-func Compact(tree *Tree, path *Path) *Tree {
+func Compact(tree *Tree, _ *Path) *Tree {
 	nonNil := tree.nonNilChildren()
 	if slices.Equal(nonNil, tree.Children) {
 		return tree
@@ -150,7 +161,7 @@ func Compact(tree *Tree, path *Path) *Tree {
 	}
 }
 
-func PromoteSingleChild(tree *Tree, path *Path) *Tree {
+func PromoteSingleChild(tree *Tree, _ *Path) *Tree {
 	nonNil := tree.nonNilChildren()
 	if len(nonNil) == 1 {
 		return nonNil[0]
@@ -158,7 +169,7 @@ func PromoteSingleChild(tree *Tree, path *Path) *Tree {
 	return tree
 }
 
-func DropOrphanNonTerminal(tree *Tree, path *Path) *Tree {
+func DropOrphanNonTerminal(tree *Tree, _ *Path) *Tree {
 	if !tree.Node.Terminal() && len(tree.nonNilChildren()) == 0 {
 		return nil
 	} else {
@@ -168,8 +179,8 @@ func DropOrphanNonTerminal(tree *Tree, path *Path) *Tree {
 
 func Compose(mapper ...Map) Map {
 	return func(tree *Tree, path *Path) *Tree {
-		for i := len(mapper) - 1; i >= 0; i-- {
-			tree = mapper[i](tree, path)
+		for _, mapper := range mapper {
+			tree = mapper(tree, path)
 			if tree == nil {
 				break
 			}
@@ -177,6 +188,8 @@ func Compose(mapper ...Map) Map {
 		return tree
 	}
 }
+
+var CleanUp = Compose(DropOrphanNonTerminal, PromoteSingleChild, Compact)
 
 func (tree *Tree) nonNilChildren() []*Tree {
 	changed := false
