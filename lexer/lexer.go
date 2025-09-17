@@ -98,7 +98,7 @@ func (lexer *Lexer) lex(in io.Reader, matchUnknown bool) iter.Seq2[*Token, error
 		column, line := 1, 1
 		scanner := bufio.NewReader(in)
 
-		var noMatch strings.Builder
+		var unmatchedText strings.Builder
 
 		lastFullMatchPosition := -1
 		var lastFullMatchToken *TokenType
@@ -110,6 +110,13 @@ func (lexer *Lexer) lex(in io.Reader, matchUnknown bool) iter.Seq2[*Token, error
 		}
 		input := make([]byte, bufferSize)
 
+		//
+		// +------+------------+----------+
+		// |######|************|::::::::::|
+		// +------+------------+----------+
+		//        ^            ^          ^
+		//     emitted      matched     read
+		//
 		var emitted, matched, read int
 		var err error
 		for err == nil {
@@ -157,24 +164,30 @@ func (lexer *Lexer) lex(in io.Reader, matchUnknown bool) iter.Seq2[*Token, error
 				}
 
 				if lastFullMatchPosition == -1 {
-					noMatch.WriteRune(r)
+					unmatchedText.WriteRune(r)
 					if noneMatch {
 						lexer.reset()
 					}
 				} else {
-					if noMatch.Len() > 0 {
+					if unmatchedText.Len() > 0 {
 						// Current character fails to produce but previous character did:
 						// We can emit a token ending with the previous character and start
 						// a new token with the current character.
-						if noMatch.Len() > lastFullMatch.Len()-n {
-							unknown := noMatch.String()[0:(noMatch.Len() - lastFullMatch.Len() + n)]
-							t, e := lexer.produceErrorToken(unknown, !matchUnknown, line, column)
+						unmatched := unmatchedText.String()
+						unmatchedStart := matched - len(unmatched) - n
+						lastFullMatchStart := lastFullMatchPosition - lastFullMatch.Len()
+
+						if unmatchedStart+len(unmatched) > lastFullMatchStart {
+							unmatched = unmatched[0 : lastFullMatchStart-unmatchedStart]
+						}
+						if len(unmatched) > 0 {
+							t, e := lexer.produceErrorToken(unmatched, !matchUnknown, line, column)
 							if !yield(t, e) || (e != nil && !matchUnknown) {
 								return
 							}
-							emitted += len(unknown)
+							emitted += len(unmatched)
 						}
-						noMatch.Reset()
+						unmatchedText.Reset()
 					} else if noneMatch {
 						t := lexer.produceToken(lastFullMatchToken, lastFullMatch.String(), line, column)
 						if !yield(t, nil) {
@@ -186,6 +199,8 @@ func (lexer *Lexer) lex(in io.Reader, matchUnknown bool) iter.Seq2[*Token, error
 						lastFullMatchPosition = -1
 						lastFullMatch.Reset()
 						lastFullMatchToken = nil
+
+						lexer.reset()
 					}
 				}
 				if !noneMatch {
@@ -199,8 +214,8 @@ func (lexer *Lexer) lex(in io.Reader, matchUnknown bool) iter.Seq2[*Token, error
 			}
 		}
 		if lastFullMatch.Len() == 0 {
-			if noMatch.Len() > 0 {
-				unknown := noMatch.String()
+			if unmatchedText.Len() > 0 {
+				unknown := unmatchedText.String()
 				t, e := lexer.produceErrorToken(unknown, !matchUnknown, line, column)
 				if !yield(t, e) || (e != nil && !matchUnknown) {
 					return
@@ -243,7 +258,6 @@ func Split(s string, regex ...string) iter.Seq[string] {
 }
 
 func (lexer *Lexer) produceToken(token *TokenType, text string, line, column int) *Token {
-	lexer.reset()
 	return &Token{token, text, line, column - utf8.RuneCountInString(text)}
 }
 
@@ -252,7 +266,6 @@ func (lexer *Lexer) produceErrorToken(noMatch string, showErrorMessage bool, lin
 	if showErrorMessage {
 		msg = lexer.errorMessage(noMatch, line, column)
 	}
-	lexer.reset()
 	return &Token{
 			Type:   UnknownType,
 			Text:   noMatch,

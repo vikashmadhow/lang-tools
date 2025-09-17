@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.1] - 2025-09-17
+- Fixed 2 issues with lexer:
+  - Incorrect calculation and removal of overlapping text from unmatched tokens. 
+  - Lexer was being reset after emitting an unmatched token, which caused it to
+    miss the starting part of the next valid token.
+
 ## [0.5.0] - 2025-09-17
 - New lexer implementation that can be used for tokenization as well as lexing.
   - Tokenization and splitting support.

@@ -3,6 +3,7 @@
 package lexer
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 )
@@ -14,7 +15,7 @@ func TestTokenize(t *testing.T) {
 		expected []string
 	}{
 		{"a+b", []string{"\\+"}, []string{"a", "+", "b"}},
-		{"123 + 456 - 5", []string{`\s*\+\s*`, `\s*-\s*`}, []string{"123", " + ", "456", " - ", "5"}},
+		{"123 +  456 -5+4", []string{`\s*\+\s*`, `\s*-\s*`}, []string{"123", " +  ", "456", " -", "5", "+", "4"}},
 		//{"x = y", []string{"\\+"}, []string{"x", "=", "y"}},
 		//{" a + b ", []string{"\\+"}, []string{"a", "+", "b"}},
 		//{"\"hello\"", []string{"\\+"}, []string{"\"hello\""}},
@@ -26,6 +27,7 @@ func TestTokenize(t *testing.T) {
 	for _, test := range tests {
 		var result []string
 		for s := range Tokenize(test.input, test.patterns...) {
+			fmt.Println("-" + s + "-")
 			result = append(result, s)
 		}
 		if !slices.Equal(result, test.expected) {

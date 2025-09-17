@@ -7,7 +7,18 @@ import (
 	"strings"
 )
 
-type MatchType int
+type (
+	MatchType int
+
+	Matcher struct {
+		LastMatch    MatchType
+		FullMatch    strings.Builder
+		PartialMatch strings.Builder
+		Groups       map[int]string
+		Compiled     *CompiledRegex
+		State        state
+	}
+)
 
 const (
 	// NoMatch Last match was unsuccessful, the matcher must be reset for valid subsequent matching
@@ -24,15 +35,6 @@ const (
 	// Start Matching has not started yet. The matcher is set to this State on creation or reset.
 	Start
 )
-
-type Matcher struct {
-	LastMatch    MatchType
-	FullMatch    strings.Builder
-	PartialMatch strings.Builder
-	Groups       map[int]string
-	Compiled     *CompiledRegex
-	State        state
-}
 
 func (m *Matcher) Reset() {
 	m.LastMatch = Start
