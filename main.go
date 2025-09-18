@@ -5,38 +5,38 @@ import (
 )
 
 func main() {
-	var r *regex.CompiledRegex
+	var r *regex.Regex
 
 	r = regex.NewRegex("a")
-	println(r.Regex.Pattern())
-	println(r.Dfa.GraphViz(r.Regex.Pattern()))
+	println(r.Pattern.String())
+	println(r.Dfa.GraphViz(r.Pattern.String()))
 
 	r = regex.NewRegex("a|b")
-	println(r.Regex.Pattern())
+	println(r)
 
 	r = regex.NewRegex("ab|cd")
-	println(r.Regex.Pattern())
+	println(r)
 
 	r = regex.NewRegex("(a|b)(c|d)")
-	println(r.Regex.Pattern())
+	println(r)
 
 	r = regex.NewRegex("a|bc")
-	println(r.Regex.Pattern())
+	println(r)
 
 	r = regex.NewRegex("a*")
-	println(r.Regex.Pattern())
+	println(r)
 
 	r = regex.NewRegex("a*|(bc)*")
-	println(r.Regex.Pattern())
+	println(r)
 
 	r = regex.NewRegex("a+|(abc)*")
-	println(r.Regex.Pattern())
+	println(r)
 
 	r = regex.NewRegex("x*(fc)*")
-	println(r.Regex.Pattern())
+	println(r)
 
 	r = regex.NewRegex("ab(cd|ef)?|e(fc)*\\*[a-z0-9ABC---]+")
-	println(r.Regex.Pattern())
+	println(r)
 
 	m := r.Matcher()
 	println(m.MatchNext('a'))
@@ -45,8 +45,8 @@ func main() {
 	println(m.MatchNext('d'))
 
 	r = regex.NewRegex("ab(cd|ef)?|a(fc)*\\*[a-z0-9ABC---]+")
-	println(r.Regex.Pattern())
-	println(r.Dfa.GraphViz(r.Regex.Pattern()))
+	println(r.String())
+	println(r.Dfa.GraphViz(r.String()))
 
 	m = r.Matcher()
 	println(m.MatchNext('a'))

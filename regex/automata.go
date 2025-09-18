@@ -55,7 +55,7 @@ func (auto *automata) dfa() *automata {
 			trans := auto.Trans[s]
 			for c := range trans {
 				if !c.isEmpty() {
-					pattern := c.Pattern()
+					pattern := c.String()
 					chars[pattern] = append(chars[pattern], c)
 				}
 			}
@@ -173,7 +173,7 @@ func (auto *automata) GraphViz(title string) string {
 				nodeNames[t] = strconv.Itoa(nodeCount)
 				nodeCount++
 			}
-			spec += "\t\"" + nodeNames[s] + "\" -> \"" + nodeNames[t] + "\" [label=\"" + c.Pattern() + ":" + label(c.groups()) + "\"]\n"
+			spec += "\t\"" + nodeNames[s] + "\" -> \"" + nodeNames[t] + "\" [label=\"" + c.String() + ":" + label(c.groups()) + "\"]\n"
 		}
 	}
 	spec += "}"

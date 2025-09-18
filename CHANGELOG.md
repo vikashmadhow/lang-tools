@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.2] - 2025-09-18
+- Renamed `Regex` to `Pattern` and `CompiledRegex` to `Regex`, as the latter is
+  the public interface for regular expressions. `Pattern` are the uncompiled
+  regular expression which is only used when defining new regex.
+- Character set matching now uses a binary search over the spans of the individual
+  `char` comprising the set, if there are more than 5 of them. This result in a
+  60% speedup for matching a large set of characters.
+- Refactoring and cleanup of regex to simplify interface.
+
 ## [0.5.1] - 2025-09-17
 - Fixed 2 issues with lexer:
   - Incorrect calculation and removal of overlapping text from unmatched tokens. 

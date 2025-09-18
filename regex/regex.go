@@ -16,53 +16,53 @@ import (
 )
 
 type (
-	// Regex is the base visible interface of regular expressions
-	Regex interface {
-		Pattern() string
+	// Pattern is the base visible interface of regular expressions
+	Pattern interface {
+		String() string
 		nfa() *automata
 	}
 
-	CompiledRegex struct {
-		Regex Regex
-		Nfa   *automata
-		Dfa   *automata
+	Regex struct {
+		Pattern Pattern
+		//Nfa     *automata
+		Dfa *automata
 	}
 
 	// choice represents the regex | regex rule
 	choice struct {
-		left  Regex
-		right Regex
+		left  Pattern
+		right Pattern
 	}
 
 	// sequence represents a sequence of regular expressions (a, b, ...)
 	sequence struct {
-		sequence []Regex
+		sequence []Pattern
 	}
 
 	// zeroOrOne is for an optional regular expression (re?)
 	zeroOrOne struct {
-		opt Regex
+		opt Pattern
 	}
 
 	// zeroOrMore is for the Kleene closure (re*)
 	zeroOrMore struct {
-		re Regex
+		re Pattern
 	}
 
 	// oneOrMore is for positive closure (re+)
 	oneOrMore struct {
-		re Regex
+		re Pattern
 	}
 
 	// oneOrMore is for positive closure (re+)
 	repeat struct {
-		re       Regex
+		re       Pattern
 		min, max uint8
 	}
 
 	// captureGrp is for grouping regular expressions inside brackets, i.e., (re)
 	captureGroup struct {
-		re Regex
+		re Pattern
 	}
 )
 
@@ -82,7 +82,7 @@ func Escape(s string) string {
 }
 
 // NewRegex creates a new regular expression from the input
-func NewRegex(input string) *CompiledRegex {
+func NewRegex(input string) *Regex {
 	group := 0
 	groups := list.New()
 	groups.PushBack(0)
@@ -90,28 +90,14 @@ func NewRegex(input string) *CompiledRegex {
 	r := parser.regex(&modifier{caseInsensitive: false, unicode: false})
 	n := r.nfa()
 	d := n.dfa()
-	return &CompiledRegex{r, n, d}
+	return &Regex{r, d}
 }
 
-//func Split(str string, sep string) []string {
-//	var separated []string
-//	separator := NewRegex(Escape(sep))
-//	matcher := separator.Matcher()
-//	for matcher.MatchNext() {
-//		if separator.MatchEmpty() {
-//			break
-//		}
-//		separated = append(separated, separator.Generate())
-//		separator.MatchEmpty()
-//	}
-//	return separated
-//}
-
-func (r *CompiledRegex) Matcher() *Matcher {
+func (r *Regex) Matcher() *Matcher {
 	return &Matcher{LastMatch: Start, Groups: map[int]string{}, Compiled: r, State: r.Dfa.start}
 }
 
-func (r *CompiledRegex) Match(input string) bool {
+func (r *Regex) Match(input string) bool {
 	m := r.Matcher()
 	for _, c := range input {
 		if m.MatchNext(c) == NoMatch {
@@ -121,11 +107,11 @@ func (r *CompiledRegex) Match(input string) bool {
 	return slices.Index(r.Dfa.final, m.State) != -1
 }
 
-func (r *CompiledRegex) MatchEmpty() bool {
+func (r *Regex) MatchEmpty() bool {
 	return slices.Index(r.Dfa.final, r.Dfa.start) != -1
 }
 
-func (r *CompiledRegex) Generate() string {
+func (r *Regex) Generate() string {
 	var s strings.Builder
 	state := r.Dfa.start
 	trans := r.Dfa.Trans[state]
@@ -150,10 +136,14 @@ func (r *CompiledRegex) Generate() string {
 	return s.String()
 }
 
+func (r *Regex) String() string {
+	return r.Pattern.String()
+}
+
 //-----------------Regex interface methods------------//
 
-func (c *choice) Pattern() string {
-	return c.left.Pattern() + "|" + c.right.Pattern()
+func (c *choice) String() string {
+	return c.left.String() + "|" + c.right.String()
 	//return "Or(" + c.left.Pattern() + ", " + c.right.Pattern() + ")"
 }
 
@@ -186,20 +176,11 @@ func (c *choice) nfa() *automata {
 	return &a
 }
 
-func (s *sequence) Pattern() string {
+func (s *sequence) String() string {
 	ret := ""
-	//ret := "Seq("
-	//first := true
 	for _, re := range s.sequence {
-		//if first {
-		//	first = false
-		//} else {
-		//ret += ", "
-		//	ret += ""
-		//}
-		ret += re.Pattern()
+		ret += re.String()
 	}
-	//ret += ")"
 	return ret
 }
 
@@ -233,8 +214,8 @@ func (s *sequence) nfa() *automata {
 	return &a
 }
 
-func (r *zeroOrOne) Pattern() string {
-	return r.opt.Pattern() + "?"
+func (r *zeroOrOne) String() string {
+	return r.opt.String() + "?"
 	//return "?(" + r.opt.Pattern() + ")"
 }
 
@@ -250,12 +231,12 @@ func (r *zeroOrOne) nfa() *automata {
 	return opt
 }
 
-func (r *zeroOrMore) Pattern() string {
-	return r.re.Pattern() + "*"
+func (r *zeroOrMore) String() string {
+	return r.re.String() + "*"
 	//return "*(" + r.re.Pattern() + ")"
 }
 
-// automata generates a finite automaton for a zero-or-more repetition (Kleene closure) of the pattern.
+// automata generates a finite automaton for a zero-or-more repetition (Kleene closure) of the Pattern.
 //
 //	    ______________
 //	   ^              \
@@ -271,12 +252,12 @@ func (r *zeroOrMore) nfa() *automata {
 	return re
 }
 
-func (r *oneOrMore) Pattern() string {
-	return r.re.Pattern() + "+"
+func (r *oneOrMore) String() string {
+	return r.re.String() + "+"
 	//return "+(" + r.re.Pattern() + ")"
 }
 
-// automata generates a finite automaton for a one-or-more repetition of the pattern.
+// automata generates a finite automaton for a one-or-more repetition of the Pattern.
 //
 //	start --> ... --> final
 //	 ^                  /
@@ -288,8 +269,8 @@ func (r *oneOrMore) nfa() *automata {
 	return re
 }
 
-func (r *repeat) Pattern() string {
-	s := r.re.Pattern() + "{"
+func (r *repeat) String() string {
+	s := r.re.String() + "{"
 	if r.min == r.max {
 		s += strconv.Itoa(int(r.min))
 	} else {
@@ -302,10 +283,9 @@ func (r *repeat) Pattern() string {
 		}
 	}
 	return s + "}"
-	//return "*(" + r.re.Pattern() + ")"
 }
 
-// automata generates a finite automaton for a range (m,n) repetition of the pattern.
+// automata generates a finite automaton for a range (m,n) repetition of the Pattern.
 //
 //	                              ___________________
 //							     /   _______________ \
@@ -323,7 +303,7 @@ func (r *repeat) nfa() *automata {
 	}
 	first := true
 	if r.min > 0 {
-		s := &sequence{slices.Repeat([]Regex{r.re}, int(r.min))}
+		s := &sequence{slices.Repeat([]Pattern{r.re}, int(r.min))}
 		a = s.nfa()
 		first = false
 	}
@@ -361,8 +341,8 @@ func (r *repeat) nfa() *automata {
 	return a
 }
 
-func (r *captureGroup) Pattern() string {
-	return "(" + r.re.Pattern() + ")"
+func (r *captureGroup) String() string {
+	return "(" + r.re.String() + ")"
 	//return "Grp(" + r.re.Pattern() + ")"
 }
 

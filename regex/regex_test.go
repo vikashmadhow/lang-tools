@@ -3,12 +3,13 @@
 package regex
 
 import (
+	"strings"
 	"testing"
 )
 
 func TestX(t *testing.T) {
 	r := NewRegex("x(ab(vw(cd)|(ef))?)|(a(fc)*\\*[a-z0-9ABC---]+)")
-	println(r.Nfa.GraphViz("x(ab(vw(cd)|(ef))?)|(a(fc)*\\*[a-z0-9ABC---]+)"))
+	println(r.Pattern.nfa().GraphViz("x(ab(vw(cd)|(ef))?)|(a(fc)*\\*[a-z0-9ABC---]+)"))
 	println(r.Dfa.GraphViz("x(ab(vw(cd)|(ef))?)|(a(fc)*\\*[a-z0-9ABC---]+)"))
 	//if !r.Match("") {
 	//	t.Error("'' did not match ''")
@@ -18,9 +19,37 @@ func TestX(t *testing.T) {
 	//}
 }
 
+func TestMultipleRange(t *testing.T) {
+	var re strings.Builder
+	re.WriteRune('[')
+	var s strings.Builder
+	for i := 10000; i > 10; i -= 4 {
+		//start, end := rand.Intn(utf8.MaxRune), rand.Intn(utf8.MaxRune)
+		//if start > end {
+		//	start, end = end, start
+		//}
+		//re.WriteRune(rune(start))
+		//re.WriteRune('-')
+		//re.WriteRune(rune(end))
+
+		re.WriteRune(rune(i - 2))
+		re.WriteRune('-')
+		re.WriteRune(rune(i))
+
+		//s.WriteRune(rune(start + rand.Intn(end-start+1)))
+		s.WriteRune(rune(i - 1))
+	}
+	re.WriteString("]*")
+	for i := 0; i < 1000; i++ {
+		if !NewRegex(re.String()).Match(s.String()) {
+			t.Error("Multiple range did not match")
+		}
+	}
+}
+
 func Test2(t *testing.T) {
 	r := NewRegex("(ab)|(ac)")
-	println(r.Nfa.GraphViz("(ab)|(ac)"))
+	println(r.Pattern.nfa().GraphViz("(ab)|(ac)"))
 	println(r.Dfa.GraphViz("(ab)|(ac)"))
 
 	//if !r.Match("") {

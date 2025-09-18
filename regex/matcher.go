@@ -15,7 +15,7 @@ type (
 		FullMatch    strings.Builder
 		PartialMatch strings.Builder
 		Groups       map[int]string
-		Compiled     *CompiledRegex
+		Compiled     *Regex
 		State        state
 	}
 )
@@ -103,19 +103,3 @@ func (m *Matcher) MatchNext(r rune) MatchType {
 	}
 	return m.LastMatch
 }
-
-// TestMatchNext matches the next character but does not update the matcher's state.
-// It is akin to peeking ahead in the input string.
-//func (m *Matcher) TestMatchNext(r rune) MatchType {
-//	trans := m.Compiled.Dfa.Trans[m.State]
-//	for c, t := range trans {
-//		if c.match(r) {
-//			if slices.Index(m.Compiled.Dfa.final, t) == -1 {
-//				return PartialMatch
-//			} else {
-//				return FullMatch
-//			}
-//		}
-//	}
-//	return NoMatch
-//}

@@ -33,7 +33,7 @@ type (
 
 		random() string
 
-		Regex
+		Pattern
 	}
 
 	empty struct{ _ uint8 }
@@ -61,6 +61,8 @@ type (
 		exclude bool
 		sets    list.List // [char]
 		group   list.List // [int]
+
+		span spanSet
 	}
 
 	// Matches with a list of strings. This is only used for random generation
@@ -84,7 +86,7 @@ type (
 
 //------------- The empty character -------------//
 
-func (c *empty) Pattern() string {
+func (c *empty) String() string {
 	return ""
 }
 
@@ -116,7 +118,7 @@ func (c *empty) random() string {
 
 //------------- Any character -------------//
 
-func (c *anyChar) Pattern() string {
+func (c *anyChar) String() string {
 	return "."
 	//return ".:" + label(c.groups())
 }
@@ -155,7 +157,7 @@ func (c *anyChar) random() string {
 
 //------------- A single character match -------------//
 
-func (c *singleChar) Pattern() string {
+func (c *singleChar) String() string {
 	return string(c.char)
 	//return string(c.char) + ":" + label(c.groups())
 }
@@ -206,7 +208,7 @@ func (c *singleChar) random() string {
 
 //------------- A character range match -------------//
 
-func (c *charRange) Pattern() string {
+func (c *charRange) String() string {
 	if c.to < math.MaxUint8 {
 		return string(c.from) + "-" + string(c.to)
 		//return string(c.from) + "-" + string(c.to) + ":" + label(c.groups())
@@ -275,7 +277,7 @@ func (c *charRange) random() string {
 
 //------------- A character set combines different characters (and ranges) -------------//
 
-func (c *charSet) Pattern() string {
+func (c *charSet) String() string {
 	ret := "["
 	//ret := "CharSet("
 	if c.exclude {
@@ -289,7 +291,7 @@ func (c *charSet) Pattern() string {
 		} else {
 			ret += "|"
 		}
-		ret += cs.Value.(char).Pattern()
+		ret += cs.Value.(char).String()
 	}
 	ret += "]"
 	//ret += "]:" + label(c.groups())
@@ -314,33 +316,36 @@ func (c *charSet) nfa() *automata {
 }
 
 func (c *charSet) match(ch rune) bool {
-	matched := false
-	for cs := c.sets.Front(); cs != nil; cs = cs.Next() {
-		if cs.Value.(char).match(ch) {
-			matched = true
-			break
-		}
-	}
-	if c.exclude {
-		return !matched
-	}
-	return matched
+	return c.spanSet().match(ch)
+	//matched := false
+	//for cs := c.sets.Front(); cs != nil; cs = cs.Next() {
+	//	if cs.Value.(char).match(ch) {
+	//		matched = true
+	//		break
+	//	}
+	//}
+	//if c.exclude {
+	//	return !matched
+	//}
+	//return matched
 }
 
 func (c *charSet) spanSet() spanSet {
-	var span spanSet
-	for cs := c.sets.Front(); cs != nil; cs = cs.Next() {
-		span = append(span, cs.Value.(char).spanSet()...)
-	}
-	if c.exclude {
-		if c.mod.unicode {
-			return span.invertUnicode()
-		} else {
-			return span.invertAsciiPrintable()
+	if c.span == nil {
+		for cs := c.sets.Front(); cs != nil; cs = cs.Next() {
+			c.span = append(c.span, cs.Value.(char).spanSet()...)
 		}
-	} else {
-		return span.compact()
+		if c.exclude {
+			//if c.mod.unicode {
+			c.span = c.span.invertUnicode()
+			//} else {
+			//	c.span = c.span.invertAsciiPrintable()
+			//}
+		} else {
+			c.span = c.span.compact()
+		}
 	}
+	return c.span
 }
 
 func (c *charSet) random() string {
@@ -349,7 +354,7 @@ func (c *charSet) random() string {
 
 //----------------- In list ----------------//
 
-func (c *inList) Pattern() string {
+func (c *inList) String() string {
 	return "(:" + c.list + ")"
 }
 

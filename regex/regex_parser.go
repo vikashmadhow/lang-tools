@@ -65,7 +65,7 @@ func (r *parser) hasMore() bool {
 	return len(r.input) > r.position
 }
 
-func (r *parser) regex(mod *modifier) Regex {
+func (r *parser) regex(mod *modifier) Pattern {
 	term := r.term(mod)
 	if r.hasMore() && r.peek() == '|' {
 		r.next()
@@ -76,8 +76,8 @@ func (r *parser) regex(mod *modifier) Regex {
 	}
 }
 
-func (r *parser) term(mod *modifier) Regex {
-	var factors []Regex
+func (r *parser) term(mod *modifier) Pattern {
+	var factors []Pattern
 	for r.hasMore() && r.peek() != ')' && r.peek() != '|' {
 		f := r.factor(mod)
 		if f != nil {
@@ -87,7 +87,7 @@ func (r *parser) term(mod *modifier) Regex {
 	return &sequence{factors}
 }
 
-func (r *parser) factor(mod *modifier) Regex {
+func (r *parser) factor(mod *modifier) Pattern {
 	base := r.base(mod)
 	if r.hasMore() {
 		switch r.peek() {
@@ -157,7 +157,7 @@ func (r *parser) factor(mod *modifier) Regex {
 	return base
 }
 
-func (r *parser) base(mod *modifier) Regex {
+func (r *parser) base(mod *modifier) Pattern {
 	if r.peek() == '(' {
 		r.next()
 		if r.peek() == '?' {
@@ -228,7 +228,7 @@ func (r *parser) base(mod *modifier) Regex {
 	}
 }
 
-func (r *parser) ch(mod *modifier) Regex {
+func (r *parser) ch(mod *modifier) Pattern {
 	if r.peek() == '[' {
 		r.next()
 
@@ -257,7 +257,7 @@ func (r *parser) ch(mod *modifier) Regex {
 		if r.hasMore() {
 			r.next()
 		}
-		return &charSet{mod, exclude, *charSets, cp(r.groups)}
+		return &charSet{mod, exclude, *charSets, cp(r.groups), nil}
 
 	} else if r.peek() == '\\' {
 		r.next()
@@ -269,7 +269,7 @@ func (r *parser) ch(mod *modifier) Regex {
 			case 'D':
 				cs := list.New()
 				cs.PushBack(&charRange{mod, '0', '9', cp(r.groups)})
-				return &charSet{mod, true, *cs, cp(r.groups)}
+				return &charSet{mod, true, *cs, cp(r.groups), nil}
 			case 's':
 				cs := list.New()
 				cs.PushBack(&singleChar{mod, ' ', cp(r.groups)})
@@ -277,7 +277,7 @@ func (r *parser) ch(mod *modifier) Regex {
 				cs.PushBack(&singleChar{mod, '\n', cp(r.groups)})
 				cs.PushBack(&singleChar{mod, '\f', cp(r.groups)})
 				cs.PushBack(&singleChar{mod, '\r', cp(r.groups)})
-				return &charSet{mod, false, *cs, cp(r.groups)}
+				return &charSet{mod, false, *cs, cp(r.groups), nil}
 			case 'S':
 				cs := list.New()
 				cs.PushBack(&singleChar{mod, ' ', cp(r.groups)})
@@ -285,21 +285,21 @@ func (r *parser) ch(mod *modifier) Regex {
 				cs.PushBack(&singleChar{mod, '\n', cp(r.groups)})
 				cs.PushBack(&singleChar{mod, '\f', cp(r.groups)})
 				cs.PushBack(&singleChar{mod, '\r', cp(r.groups)})
-				return &charSet{mod, true, *cs, cp(r.groups)}
+				return &charSet{mod, true, *cs, cp(r.groups), nil}
 			case 'w':
 				cs := list.New()
 				cs.PushBack(&charRange{mod, '0', '9', cp(r.groups)})
 				cs.PushBack(&charRange{mod, 'a', 'z', cp(r.groups)})
 				cs.PushBack(&charRange{mod, 'A', 'Z', cp(r.groups)})
 				cs.PushBack(&singleChar{mod, '_', cp(r.groups)})
-				return &charSet{mod, false, *cs, cp(r.groups)}
+				return &charSet{mod, false, *cs, cp(r.groups), nil}
 			case 'W':
 				cs := list.New()
 				cs.PushBack(&charRange{mod, '0', '9', cp(r.groups)})
 				cs.PushBack(&charRange{mod, 'a', 'z', cp(r.groups)})
 				cs.PushBack(&charRange{mod, 'A', 'Z', cp(r.groups)})
 				cs.PushBack(&singleChar{mod, '_', cp(r.groups)})
-				return &charSet{mod, true, *cs, cp(r.groups)}
+				return &charSet{mod, true, *cs, cp(r.groups), nil}
 			default:
 				return &singleChar{mod, c, cp(r.groups)}
 			}

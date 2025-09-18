@@ -302,7 +302,7 @@ func (lexer *Lexer) errorMessage(noMatch string, line, column int) string {
 				} else {
 					msg.WriteString(", ")
 				}
-				msg.WriteString(k.Pattern())
+				msg.WriteString(k.String())
 			}
 			msg.WriteRune(')')
 		}

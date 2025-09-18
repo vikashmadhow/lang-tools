@@ -19,7 +19,7 @@ type (
 	TokenType struct {
 		Id       string
 		Pattern  string
-		Compiled *regex.CompiledRegex
+		Compiled *regex.Regex
 	}
 
 	TokenSeq struct {
