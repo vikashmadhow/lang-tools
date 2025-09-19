@@ -3,6 +3,8 @@
 package regex
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -40,8 +42,34 @@ func TestMultipleRange(t *testing.T) {
 		s.WriteRune(rune(i - 1))
 	}
 	re.WriteString("]*")
+	regex := NewRegex(re.String())
+	text := s.String()
 	for i := 0; i < 1000; i++ {
-		if !NewRegex(re.String()).Match(s.String()) {
+		if !regex.Match(text) {
+			t.Error("Multiple range did not match")
+		}
+	}
+}
+
+func TestMultipleRangeInternal(t *testing.T) {
+	var re strings.Builder
+	re.WriteRune('[')
+	var s strings.Builder
+	for i := 10000; i > 10; i -= 4 {
+		re.WriteString("\\x{" + strconv.FormatInt(int64(i-2), 16) + "}")
+		re.WriteRune('-')
+		re.WriteString("\\x{" + strconv.FormatInt(int64(i), 16) + "}")
+		s.WriteRune(rune(i - 1))
+	}
+	re.WriteString("]*")
+	regex, e := regexp.Compile(re.String())
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	text := s.String()
+	for i := 0; i < 1000; i++ {
+		if !regex.MatchString(text) {
 			t.Error("Multiple range did not match")
 		}
 	}

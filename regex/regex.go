@@ -94,21 +94,23 @@ func NewRegex(input string) *Regex {
 }
 
 func (r *Regex) Matcher() *Matcher {
-	return &Matcher{LastMatch: Start, Groups: map[int]string{}, Compiled: r, State: r.Dfa.start}
+	return &Matcher{LastMatch: Start, Groups: map[int]*strings.Builder{}, Compiled: r, State: r.Dfa.start}
 }
 
 func (r *Regex) Match(input string) bool {
-	m := r.Matcher()
-	for _, c := range input {
-		if m.MatchNext(c) == NoMatch {
-			return false
-		}
-	}
-	return slices.Index(r.Dfa.final, m.State) != -1
+	return r.Matcher().Match(input)
+	//m := r.Matcher()
+	//for _, c := range input {
+	//	if m.MatchNext(c) == NoMatch {
+	//		return false
+	//	}
+	//}
+	//return slices.Index(r.Dfa.final, m.State) != -1
 }
 
 func (r *Regex) MatchEmpty() bool {
-	return slices.Index(r.Dfa.final, r.Dfa.start) != -1
+	return r.Dfa.finalMap[r.Dfa.start]
+	//return slices.Index(r.Dfa.final, r.Dfa.start) != -1
 }
 
 func (r *Regex) Generate() string {

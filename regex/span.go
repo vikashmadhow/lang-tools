@@ -126,7 +126,9 @@ func (r spanSet) sort() {
 func (r spanSet) match(c rune) bool {
 	if len(r) < 5 {
 		for _, s := range r {
-			if s.match(c) {
+			if c < s.from {
+				return false
+			} else if s.match(c) {
 				return true
 			}
 		}
@@ -140,7 +142,7 @@ func (r spanSet) match(c rune) bool {
 			if r[mid].from < c {
 				lo = mid + 1
 			} else {
-				hi = mid
+				hi = mid - 1
 			}
 		}
 	}

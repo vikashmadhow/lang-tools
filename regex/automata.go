@@ -20,17 +20,19 @@ type (
 	set[T comparable] map[T]bool
 
 	automata struct {
-		Trans transitions
-		start state
-		final []state
+		Trans    transitions
+		start    state
+		final    []state
+		finalMap map[state]bool
 	}
 )
 
 func (auto *automata) dfa() *automata {
 	dfa := automata{
-		Trans: make(transitions),
-		start: nil,
-		final: []state{},
+		Trans:    make(transitions),
+		start:    nil,
+		final:    []state{},
+		finalMap: map[state]bool{},
 	}
 
 	dfaStates := map[state]set[state]{}
@@ -43,6 +45,7 @@ func (auto *automata) dfa() *automata {
 	dfaStates[dfa.start] = *reachable
 	if auto.containsFinal(reachable) {
 		dfa.final = append(dfa.final, dfa.start)
+		dfa.finalMap[dfa.start] = true
 	}
 
 	for len(explored) > 0 {
@@ -94,8 +97,9 @@ func (auto *automata) dfa() *automata {
 				dfaStates[target] = *reachable
 				explored <- *reachable
 			}
-			if auto.containsFinal(reachable) && slices.Index(dfa.final, target) == -1 {
+			if auto.containsFinal(reachable) && !dfa.finalMap[target] {
 				dfa.final = append(dfa.final, target)
+				dfa.finalMap[target] = true
 			}
 			_, ok := dfa.Trans[source]
 			if !ok {

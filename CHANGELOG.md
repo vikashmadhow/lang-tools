@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.3] - 2025-09-18
+- Fixed the binary search matching for character sets where the iteration could be
+  trapped in an infinite loop.
+- `finalMap` added to `Dfa` to make final state check faster.
+- `Groups` in `Matcher` now uses a `strings.Builder` instead of simple string concatenation
+  resulting in more that 100x speedup for complex regex.
+- `Nfa` dropped from `Regex` as it can be obtained through the `Pattern` linked to 
+  the `Regex`.
+- Slight optimization of linear matching for character sets, where the matching is stopped
+  as soon as a span that is greater than the current character is found.
+
 ## [0.5.2] - 2025-09-18
 - Renamed `Regex` to `Pattern` and `CompiledRegex` to `Regex`, as the latter is
   the public interface for regular expressions. `Pattern` are the uncompiled
