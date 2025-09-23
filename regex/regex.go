@@ -89,6 +89,7 @@ func NewRegex(input string) *Regex {
 	r := parser.regex(&modifier{caseInsensitive: false, unicode: false})
 	n := r.nfa()
 	d := n.dfa().minimize()
+	//d := n.dfa()
 	return &Regex{r, d}
 }
 

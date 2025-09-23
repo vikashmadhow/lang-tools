@@ -85,19 +85,6 @@ func (m *Matcher) MatchNext(r rune) MatchType {
 					m.FullMatch.WriteRune(r)
 					m.LastMatch = FullMatch
 				}
-				//groupSet := set[int]{}
-				//groups := c.groups()
-				//for g := groups.Front(); g != nil; g = g.Next() {
-				//	group := g.Value.(int)
-				//	if group != 0 {
-				//		groupSet[group] = true
-				//	}
-				//	_, ok := m.Groups[g.Value.(int)]
-				//	if !ok {
-				//		m.Groups[group] = ""
-				//	}
-				//	m.Groups[group] += string(r)
-				//}
 				groupSet := set[int]{}
 				groups := c.groups()
 				for g := groups.Front(); g != nil; g = g.Next() {

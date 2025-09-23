@@ -145,11 +145,16 @@ func (auto *automata) minimize() *automata {
 					equivPartition := []state{s}
 					for other, otherPartition := range partitions {
 						if other != s && otherPartition == sPartition {
+							equivalent := len(auto.Trans[other]) != 0
 							for c2, t2 := range auto.Trans[other] {
-								if partitions[t1] == partitions[t2] && slices.Equal(c1.spanSet(), c2.spanSet()) {
-									equivPartition = append(equivPartition, other)
+								if partitions[t1] != partitions[t2] || !slices.Equal(c1.spanSet(), c2.spanSet()) {
+									equivalent = false
 									break
 								}
+							}
+							if equivalent {
+								equivPartition = append(equivPartition, other)
+								break
 							}
 						}
 					}

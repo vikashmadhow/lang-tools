@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.5] - 2025-09-23
+- Improved implementation of Hopcroft-Karp algorithm by considering all transitions
+  from a state to another when determining partition membership.
+
 ## [0.5.4] - 2025-09-22
 - Hopcroft-Karp algorithm for finding minimal DFA, which is now always applied
   when constructing the DFA from a regular expression.
