@@ -25,8 +25,11 @@ type (
 	char interface {
 		match(c rune) bool
 		isEmpty() bool
+
 		groups() *list.List // [int]
 		setGroups(g *list.List)
+
+		modifier() *modifier
 
 		// spanSet returns the range of characters that can be matched by this char.
 		spanSet() spanSet
@@ -116,6 +119,10 @@ func (c *empty) random() string {
 	return ""
 }
 
+func (c *empty) modifier() *modifier {
+	return nil
+}
+
 //------------- Any character -------------//
 
 func (c *anyChar) String() string {
@@ -144,15 +151,19 @@ func (c *anyChar) match(rune) bool {
 }
 
 func (c *anyChar) spanSet() spanSet {
-	if c.mod.unicode {
-		return allUnicode
-	} else {
-		return asciiPrintable
-	}
+	//if c.mod.unicode {
+	return allUnicode
+	//} else {
+	//    return asciiPrintable
+	//}
 }
 
 func (c *anyChar) random() string {
 	return string(c.spanSet().random())
+}
+
+func (c *anyChar) modifier() *modifier {
+	return c.mod
 }
 
 //------------- A single character match -------------//
@@ -206,17 +217,17 @@ func (c *singleChar) random() string {
 	return string(c.spanSet().random())
 }
 
+func (c *singleChar) modifier() *modifier {
+	return c.mod
+}
+
 //------------- A character range match -------------//
 
 func (c *charRange) String() string {
 	if c.to < math.MaxUint8 {
 		return string(c.from) + "-" + string(c.to)
-		//return string(c.from) + "-" + string(c.to) + ":" + label(c.groups())
-		//return "Range(" + string(c.from) + "-" + string(c.to) + ")"
 	} else {
 		return string(c.from) + "-"
-		//return string(c.from) + "-" + ":" + label(c.groups())
-		//return "Range(" + string(c.from) + "-)"
 	}
 }
 
@@ -263,7 +274,7 @@ func (c *charRange) spanSet() spanSet {
 			return spanSet{
 				{lf, lt},
 				{uf, ut},
-			}
+			}.compact()
 		}
 	}
 	return spanSet{
@@ -275,16 +286,18 @@ func (c *charRange) random() string {
 	return string(c.spanSet().random())
 }
 
+func (c *charRange) modifier() *modifier {
+	return c.mod
+}
+
 //------------- A character set combines different characters (and ranges) -------------//
 
 func (c *charSet) String() string {
 	ret := "["
-	//ret := "CharSet("
 	if c.exclude {
 		ret += "^"
 	}
 	first := true
-	//for _, cs := range c.charSets {
 	for cs := c.sets.Front(); cs != nil; cs = cs.Next() {
 		if first {
 			first = false
@@ -294,8 +307,6 @@ func (c *charSet) String() string {
 		ret += cs.Value.(char).String()
 	}
 	ret += "]"
-	//ret += "]:" + label(c.groups())
-	//ret += ")"
 	return ret
 }
 
@@ -350,6 +361,10 @@ func (c *charSet) spanSet() spanSet {
 
 func (c *charSet) random() string {
 	return string(c.spanSet().random())
+}
+
+func (c *charSet) modifier() *modifier {
+	return c.mod
 }
 
 //----------------- In list ----------------//
@@ -410,6 +425,10 @@ func (c *inList) random() string {
 		word = string(unicode.ToUpper(r)) + strings.ToLower(word[s:])
 	}
 	return word
+}
+
+func (c *inList) modifier() *modifier {
+	return c.mod
 }
 
 func singleSpace(s string) string {

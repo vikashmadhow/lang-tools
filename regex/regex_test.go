@@ -114,6 +114,8 @@ func TestCaptureGroup(t *testing.T) {
 
 func TestEmpty(t *testing.T) {
 	r := NewRegex("")
+	//fmt.Println(r.Dfa.GraphViz(""))
+	//fmt.Println(r.Dfa.minimize().GraphViz("min"))
 	if !r.Match("") {
 		t.Error("'' did not match ''")
 	}

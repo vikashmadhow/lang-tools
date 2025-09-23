@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.4] - 2025-09-22
+- Hopcroft-Karp algorithm for finding minimal DFA, which is now always applied
+  when constructing the DFA from a regular expression.
+- License changed to require attribution.
+
 ## [0.5.3] - 2025-09-18
 - Fixed the binary search matching for character sets where the iteration could be
   trapped in an infinite loop.

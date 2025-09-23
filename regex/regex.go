@@ -24,8 +24,7 @@ type (
 
 	Regex struct {
 		Pattern Pattern
-		//Nfa     *automata
-		Dfa *automata
+		Dfa     *automata
 	}
 
 	// choice represents the regex | regex rule
@@ -89,7 +88,7 @@ func NewRegex(input string) *Regex {
 	parser := parser{[]rune(input), 0, &group, groups}
 	r := parser.regex(&modifier{caseInsensitive: false, unicode: false})
 	n := r.nfa()
-	d := n.dfa()
+	d := n.dfa().minimize()
 	return &Regex{r, d}
 }
 

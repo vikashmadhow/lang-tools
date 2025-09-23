@@ -14,6 +14,7 @@ type (
 	stateObj struct{ _ uint8 }
 
 	state *stateObj
+	//state uint32
 
 	transitions map[state]map[char]state
 
@@ -27,6 +28,7 @@ type (
 	}
 )
 
+// Thomson's algorithm for converting regular expression to DFA.
 func (auto *automata) dfa() *automata {
 	dfa := automata{
 		Trans:    make(transitions),
@@ -109,6 +111,146 @@ func (auto *automata) dfa() *automata {
 		}
 	}
 	return &dfa
+}
+
+// Hopcroft's algorithm for minimizing DFA
+func (auto *automata) minimize() *automata {
+	// initially partition states into two: one containing final states and the other, non-final states
+	partitions := map[state]int{}
+	partitionSize := map[int]int{}
+	for s, trans := range auto.Trans {
+		auto.partition(s, partitions, partitionSize)
+		for _, t := range trans {
+			auto.partition(t, partitions, partitionSize)
+		}
+	}
+	auto.partition(auto.start, partitions, partitionSize)
+	for _, f := range auto.final {
+		auto.partition(f, partitions, partitionSize)
+	}
+	maxPartitions := len(partitions) - 1 // special-case for empty regex having single partition containing final state
+
+	// split partitions by extracting subset of states equivalent to each other.
+	// 2 states are equivalent if they have the same outgoing character transitions
+	// to states that are in the same partition. e.g.: (s1, s2) --c--> (t1, t2)
+	// continue until no more equivalence classes can be extracted.
+	changed := true
+	for changed {
+		changed = false
+
+	split:
+		for s, sPartition := range partitions {
+			if partitionSize[sPartition] > 1 {
+				for c1, t1 := range auto.Trans[s] {
+					equivPartition := []state{s}
+					for other, otherPartition := range partitions {
+						if other != s && otherPartition == sPartition {
+							for c2, t2 := range auto.Trans[other] {
+								if partitions[t1] == partitions[t2] && slices.Equal(c1.spanSet(), c2.spanSet()) {
+									equivPartition = append(equivPartition, other)
+									break
+								}
+							}
+						}
+					}
+					if len(equivPartition) < partitionSize[sPartition] {
+						maxPartitions++
+						for _, t := range equivPartition {
+							partitions[t] = maxPartitions
+						}
+						partitionSize[sPartition] -= len(equivPartition)
+						partitionSize[maxPartitions] = len(equivPartition)
+						changed = true
+						break split
+					}
+				}
+			}
+		}
+	}
+
+	// construct minimized DFA with each partition as a separate state
+	newStates := map[int]state{}
+	splits := map[int][]state{}
+	for s, p := range partitions {
+		if _, ok := newStates[p]; !ok {
+			newStates[p] = &stateObj{}
+		}
+		splits[p] = append(splits[p], s)
+	}
+
+	newTrans := map[state]map[state][]char{}
+	newAuto := &automata{Trans: make(transitions), finalMap: make(map[state]bool)}
+	for p, states := range splits {
+		from := newStates[p]
+		for _, s := range states {
+			if auto.start == s {
+				newAuto.start = from
+			}
+			if auto.finalMap[s] && !newAuto.finalMap[from] {
+				newAuto.final = append(newAuto.final, from)
+				newAuto.finalMap[from] = true
+			}
+
+			// combine character transitions for identical pair of states
+			for c, t := range auto.Trans[s] {
+				if newTrans[from] == nil {
+					newTrans[from] = map[state][]char{}
+				}
+				to := newStates[partitions[t]]
+				existing := false
+				for _, c2 := range newTrans[from][to] {
+					if slices.Equal(c.spanSet(), c2.spanSet()) {
+						existing = true
+						break
+					}
+				}
+				if !existing {
+					newTrans[from][to] = append(newTrans[from][to], c)
+				}
+			}
+		}
+	}
+	for from, t := range newTrans {
+		if newAuto.Trans[from] == nil {
+			newAuto.Trans[from] = map[char]state{}
+		}
+		for to, trans := range t {
+			if len(trans) == 1 {
+				newAuto.Trans[from][trans[0]] = to
+			} else {
+				charSets := list.New()
+				for _, c := range trans {
+					charSets.PushBack(c)
+				}
+				ch := &charSet{trans[0].modifier(), false, *charSets, cp(trans[0].groups()), nil}
+				newAuto.Trans[from][ch] = to
+			}
+		}
+	}
+	return newAuto
+}
+
+// Add state to partitions and increase partition size, if necessary.
+func (auto *automata) partition(s state, partitions map[state]int, partitionSize map[int]int) {
+	p := 1
+	if auto.finalMap[s] {
+		p = 0
+	}
+	if _, ok := partitions[s]; !ok {
+		partitions[s] = p
+		partitionSize[p]++
+	}
+}
+
+func (auto *automata) chars() map[char]bool {
+	// union all outgoing character transitions on any State of the DFA State
+	chars := map[char]bool{}
+	for _, trans := range auto.Trans {
+		for c := range trans {
+			chars[c] = true
+		}
+	}
+	return chars
 }
 
 func (auto *automata) containsFinal(reachable *set[state]) bool {
