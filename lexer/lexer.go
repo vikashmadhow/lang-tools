@@ -110,7 +110,6 @@ func (lexer *Lexer) lex(in io.Reader, matchUnknown bool) iter.Seq2[*Token, error
 		}
 		input := make([]byte, bufferSize)
 
-		//
 		// +------+------------+----------+
 		// |######|************|::::::::::|
 		// +------+------------+----------+

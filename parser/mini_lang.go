@@ -4,7 +4,7 @@ import (
 	"github.com/vikashmadhow/lang-tools/grammar"
 )
 
-func minCGrammar() *grammar.Grammar {
+func minLangGrammar() *grammar.Grammar {
 	rules := []grammar.Rule{
 		{"program", [][]string{{"stmtList"}}},
 		{"stmtList", [][]string{{"stmt", "stmtList"}, {}}},

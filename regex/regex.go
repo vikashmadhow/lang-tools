@@ -99,18 +99,10 @@ func (r *Regex) Matcher() *Matcher {
 
 func (r *Regex) Match(input string) bool {
 	return r.Matcher().Match(input)
-	//m := r.Matcher()
-	//for _, c := range input {
-	//	if m.MatchNext(c) == NoMatch {
-	//		return false
-	//	}
-	//}
-	//return slices.Index(r.Dfa.final, m.State) != -1
 }
 
 func (r *Regex) MatchEmpty() bool {
 	return r.Dfa.finalMap[r.Dfa.start]
-	//return slices.Index(r.Dfa.final, r.Dfa.start) != -1
 }
 
 func (r *Regex) Generate() string {
@@ -146,7 +138,6 @@ func (r *Regex) String() string {
 
 func (c *choice) String() string {
 	return c.left.String() + "|" + c.right.String()
-	//return "Or(" + c.left.Pattern() + ", " + c.right.Pattern() + ")"
 }
 
 // automata constructs a finite automaton for the choice (union) of two regular expressions.
@@ -345,7 +336,6 @@ func (r *repeat) nfa() *automata {
 
 func (r *captureGroup) String() string {
 	return "(" + r.re.String() + ")"
-	//return "Grp(" + r.re.Pattern() + ")"
 }
 
 func (r *captureGroup) nfa() *automata {

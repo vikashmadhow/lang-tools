@@ -9,7 +9,7 @@ import (
 
 func TestMinCGrammar(t *testing.T) {
 	// Program structure
-	g := minCGrammar()
+	g := minLangGrammar()
 	parser := NewLL1Parser(g, g.ProdByName["program"])
 
 	//parser.PrintTable()
@@ -33,7 +33,7 @@ func TestMinCGrammar(t *testing.T) {
 
 func TestRestructureTree(t *testing.T) {
 	// Program structure
-	g := minCGrammar()
+	g := minLangGrammar()
 	parser := NewLL1Parser(g, g.ProdByName["program"])
 
 	//parser.PrintTable()

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 type (
@@ -134,8 +135,7 @@ func (auto *automata) minimize() *automata {
 	// 2 states are equivalent if they have the same outgoing character transitions
 	// to states that are in the same partition. e.g.: (s1, s2) --c--> (t1, t2)
 	// continue until no more equivalence classes can be extracted.
-	changed := true
-	for changed {
+	for changed := true; changed; {
 		changed = false
 
 	split:
@@ -224,10 +224,14 @@ func (auto *automata) minimize() *automata {
 				newAuto.Trans[from][trans[0]] = to
 			} else {
 				charSets := list.New()
+				groups := list.New()
 				for _, c := range trans {
 					charSets.PushBack(c)
+					for i := c.groups().Front(); i != nil; i = i.Next() {
+						groups.PushBack(i.Value.(int))
+					}
 				}
-				ch := &charSet{trans[0].modifier(), false, *charSets, cp(trans[0].groups()), nil}
+				ch := &charSet{trans[0].modifier(), false, *charSets, *groups, nil}
 				newAuto.Trans[from][ch] = to
 			}
 		}
@@ -350,19 +354,19 @@ func find(states map[state]set[state], state set[state]) state {
 }
 
 func label(groups *list.List) string {
-	s := ""
+	var s strings.Builder
 	if groups != nil {
 		first := true
 		for g := groups.Front(); g != nil; g = g.Next() {
 			if first {
 				first = false
 			} else {
-				s += ","
+				s.WriteRune(',')
 			}
-			s += strconv.Itoa(g.Value.(int))
+			s.WriteString(strconv.Itoa(g.Value.(int)))
 		}
 	}
-	return s
+	return s.String()
 }
 
 func charNfa(c char) *automata {

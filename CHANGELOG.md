@@ -1,8 +1,11 @@
 # Changelog
 
+## [0.5.6] - 2025-09-24
+- Cleanup.
+
 ## [0.5.5] - 2025-09-23
-- Improved implementation of Hopcroft-Karp algorithm by considering all transitions
-  from a state to another when determining partition membership.
+- Improved implementation of Hopcroft algorithm by considering all transitions from a 
+  state to another when determining partition membership.
 
 ## [0.5.4] - 2025-09-22
 - Hopcroft-Karp algorithm for finding minimal DFA, which is now always applied
@@ -38,7 +41,7 @@
 ## [0.5.0] - 2025-09-17
 - New lexer implementation that can be used for tokenization as well as lexing.
   - Tokenization and splitting support.
-  - Fixes longest-string identification for patterns which an optional suffix
+  - Fixes longest-string identification for patterns with an optional suffix
     (e.g. xyz(ab)*)
   - Read buffer is dynamically increased when there are not enough characters
     for the lexer to make a decision on emitting a token.
