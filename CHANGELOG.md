@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.7] - 2025-09-29
+- Refactored tree paths as a persistent list.
+- Add the empty token to the first set of a sentence that is empty or that 
+  matches the empty string.
+
 ## [0.5.6] - 2025-09-24
 - Cleanup.
 

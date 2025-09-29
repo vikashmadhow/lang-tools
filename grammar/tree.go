@@ -1,10 +1,11 @@
 package grammar
 
 import (
-	"iter"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/vikashmadhow/lang-tools/seq"
 )
 
 type (
@@ -23,6 +24,8 @@ type (
 		Parent  TreeParent
 	}
 
+	Path = *seq.List[*Tree]
+
 	/*
 	   <  : child
 	   << : descendent
@@ -32,18 +35,13 @@ type (
 	   e << f - d << x < ID
 	*/
 
-	Map func(tree *Tree, pathFromRoot *Path) *Tree
+	Map func(tree *Tree, pathFromRoot Path) *Tree
 
 	MatchMap func(*Tree, *MatchResult) *Tree
 
-	Path struct {
-		Head *Tree
-		Tail *Path
-	}
-
 	MatchResult struct {
 		Tree     *Tree
-		Paths    []*Path
+		Paths    []Path
 		Bindings map[string][]*Tree
 	}
 
@@ -95,18 +93,18 @@ func (tree *Tree) graphVizNode(position string) string {
 // and the mapped tree. This method allows for the trees to be immutable
 // with all mutating operations creating a new persistent tree.
 func (tree *Tree) Map(mapper Map) *Tree {
-	return tree.MapWithPath(mapper, &Path{Head: tree})
+	return tree.MapWithPath(mapper, seq.NewList(tree, nil))
 }
 
-func (tree *Tree) MapWithPath(mapper Map, path *Path) *Tree {
+func (tree *Tree) MapWithPath(mapper Map, path Path) *Tree {
 	var cp *Tree
 	for i, child := range tree.Children {
 		if child != nil {
-			mappedChild := child.MapWithPath(mapper, path.add(child))
+			mappedChild := child.MapWithPath(mapper, path.Push(child))
 			if mappedChild != child {
 				if cp == nil {
 					cp = tree.Copy()
-					path = path.replace(cp) // replace head of path with its copy
+					path = path.Replace(cp) // replace head of path with its copy
 				}
 				cp.Children[i] = mappedChild
 			}
@@ -140,7 +138,7 @@ func (tree *Tree) MapMatch(mapper MatchMap, pattern MatchPattern) *Tree {
 
 	// map matches
 	if result != nil {
-		return tree.Map(func(t *Tree, path *Path) *Tree {
+		return tree.Map(func(t *Tree, path Path) *Tree {
 			if resultMap[t] != nil {
 				return mapper(t, resultMap[t])
 			} else {
@@ -152,7 +150,7 @@ func (tree *Tree) MapMatch(mapper MatchMap, pattern MatchPattern) *Tree {
 	}
 }
 
-func Compact(tree *Tree, _ *Path) *Tree {
+func Compact(tree *Tree, _ Path) *Tree {
 	nonNil := tree.nonNilChildren()
 	if slices.Equal(nonNil, tree.Children) {
 		return tree
@@ -161,7 +159,7 @@ func Compact(tree *Tree, _ *Path) *Tree {
 	}
 }
 
-func PromoteSingleChild(tree *Tree, _ *Path) *Tree {
+func PromoteSingleChild(tree *Tree, _ Path) *Tree {
 	nonNil := tree.nonNilChildren()
 	if len(nonNil) == 1 {
 		return nonNil[0]
@@ -169,7 +167,7 @@ func PromoteSingleChild(tree *Tree, _ *Path) *Tree {
 	return tree
 }
 
-func DropOrphanNonTerminal(tree *Tree, _ *Path) *Tree {
+func DropOrphanNonTerminal(tree *Tree, _ Path) *Tree {
 	if !tree.Node.Terminal() && len(tree.nonNilChildren()) == 0 {
 		return nil
 	} else {
@@ -178,7 +176,7 @@ func DropOrphanNonTerminal(tree *Tree, _ *Path) *Tree {
 }
 
 func Compose(mapper ...Map) Map {
-	return func(tree *Tree, path *Path) *Tree {
+	return func(tree *Tree, path Path) *Tree {
 		for _, mapper := range mapper {
 			tree = mapper(tree, path)
 			if tree == nil {
@@ -209,10 +207,10 @@ func (tree *Tree) nonNilChildren() []*Tree {
 }
 
 func (index *TreeIndex) Match(patterns [][]string) []*MatchResult {
-	var tops map[*Tree][]*Path
+	var tops map[*Tree][]Path
 	for _, pattern := range patterns {
 		previousRel := ""
-		bottoms := make(map[*Tree]*Path)
+		bottoms := make(map[*Tree]Path)
 
 		// Ensures that we don't match the same sibling twice in, e.g., ID - PLUS - ID.
 		// We don't want to match the same ID for both 'ID' criteria in the pattern.
@@ -237,7 +235,7 @@ func (index *TreeIndex) Match(patterns [][]string) []*MatchResult {
 
 			if j == len(pattern)-1 {
 				for _, t := range index.TreeMap[rel] {
-					bottoms[t] = &Path{Head: t}
+					bottoms[t] = seq.NewList(t, nil)
 					matched[t] = true
 				}
 			} else {
@@ -248,7 +246,7 @@ func (index *TreeIndex) Match(patterns [][]string) []*MatchResult {
 					previousRel = rel
 				} else {
 					// match from bottoms
-					newBottoms := make(map[*Tree]*Path)
+					newBottoms := make(map[*Tree]Path)
 					switch previousRel {
 					case SIBLING:
 						for t, path := range bottoms {
@@ -257,7 +255,7 @@ func (index *TreeIndex) Match(patterns [][]string) []*MatchResult {
 								for k := len(parent.Children) - 1; k >= 0; k-- {
 									child := parent.Children[k]
 									if !matched[child] && child.Node.TreePattern() == rel {
-										newBottoms[child] = path.add(child)
+										newBottoms[child] = path.Push(child)
 										matched[child] = true
 										break
 									}
@@ -269,7 +267,7 @@ func (index *TreeIndex) Match(patterns [][]string) []*MatchResult {
 							parent := index.Parent[t]
 							if parent != nil {
 								if !matched[parent] && parent.Node.TreePattern() == rel {
-									newBottoms[parent] = path.add(parent)
+									newBottoms[parent] = path.Push(parent)
 									matched[parent] = true
 								}
 							}
@@ -280,7 +278,7 @@ func (index *TreeIndex) Match(patterns [][]string) []*MatchResult {
 							for ; p != nil && p.Node.TreePattern() != rel; p = index.Parent[p] {
 							}
 							if p != nil {
-								newBottoms[p] = path.add(p)
+								newBottoms[p] = path.Push(p)
 								matched[p] = true
 							}
 						}
@@ -297,12 +295,12 @@ func (index *TreeIndex) Match(patterns [][]string) []*MatchResult {
 			}
 		}
 		if tops == nil {
-			tops = make(map[*Tree][]*Path)
+			tops = make(map[*Tree][]Path)
 			for t, path := range bottoms {
-				tops[t] = []*Path{path}
+				tops[t] = []Path{path}
 			}
 		} else {
-			newTops := make(map[*Tree][]*Path)
+			newTops := make(map[*Tree][]Path)
 			for t, path := range bottoms {
 				if tops[t] != nil {
 					newTops[t] = append(tops[t], path)
@@ -321,10 +319,10 @@ func (index *TreeIndex) Match(patterns [][]string) []*MatchResult {
 	return result
 }
 
-func newMatchResult(tree *Tree, paths []*Path) *MatchResult {
+func newMatchResult(tree *Tree, paths []Path) *MatchResult {
 	bindings := make(map[string][]*Tree)
 	for _, path := range paths {
-		for t := range path.iter() {
+		for t := range path.Iter() {
 			pattern := t.Node.TreePattern()
 			bindings[pattern] = append(bindings[pattern], t)
 		}
@@ -340,7 +338,7 @@ func (tree *Tree) BuildIndex() *TreeIndex {
 	treeMap := TreeMap{}
 	parent := TreeParent{}
 
-	tree.Map(func(t *Tree, path *Path) *Tree {
+	tree.Map(func(t *Tree, path Path) *Tree {
 		treeMap[t.Node.TreePattern()] = append(treeMap[t.Node.TreePattern()], t)
 		if path.Tail != nil {
 			parent[t] = path.Tail.Head
@@ -352,31 +350,5 @@ func (tree *Tree) BuildIndex() *TreeIndex {
 		tree,
 		treeMap,
 		parent,
-	}
-}
-
-func (p *Path) add(head *Tree) *Path {
-	if p == nil {
-		return &Path{Head: head}
-	} else {
-		return &Path{head, p}
-	}
-}
-
-func (p *Path) replace(newHead *Tree) *Path {
-	if p == nil {
-		return &Path{Head: newHead}
-	} else {
-		return &Path{newHead, p.Tail}
-	}
-}
-
-func (p *Path) iter() iter.Seq[*Tree] {
-	return func(yield func(*Tree) bool) {
-		for path := p; path != nil; path = path.Tail {
-			if !yield(path.Head) {
-				break
-			}
-		}
 	}
 }

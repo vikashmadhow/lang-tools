@@ -13,6 +13,7 @@ import (
 func TestSimpleParser(t *testing.T) {
 	g := testSimpleGrammar()
 	parser := NewLL1Parser(g, g.ProdByName["e"])
+	parser.PrintTable()
 
 	expr := "x * y + z"
 	tree, err := parser.ParseText(expr)

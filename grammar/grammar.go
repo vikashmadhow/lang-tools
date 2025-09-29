@@ -149,6 +149,9 @@ func (s Sentence) First() map[*lexer.TokenType]bool {
 			break
 		}
 	}
+	if len(first) == 0 {
+		first[lexer.EmptyType] = true
+	}
 	return first
 }
 

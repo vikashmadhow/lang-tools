@@ -160,10 +160,7 @@ func (p *LL1Parser) Parse(input io.Reader) (*grammar.Tree, error) {
 			top := stack[0]
 			stack = stack[1:]
 
-			//fmt.Println("Top:", top)
 			sentence, ok := p.LL1ParseTable[top.Node.(grammar.Element)][token.Type]
-			//fmt.Println("Expand to:", sentence)
-
 			if !ok {
 				return nil, fmt.Errorf("no production for %q -> %q", top.Node, token.Type.Id)
 			}
