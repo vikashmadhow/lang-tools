@@ -1,11 +1,13 @@
 package regex
 
 import (
+	"fmt"
 	"testing"
 )
 
 func TestGenerator_Next1(t *testing.T) {
 	r := NewRegex("a*")
+	fmt.Println(r.Dfa.GraphViz("a*"))
 	for i := 0; i < 10; i++ {
 		println(r.Generate())
 	}

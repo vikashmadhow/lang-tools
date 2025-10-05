@@ -25,6 +25,7 @@ func TestDfaMinimization3(t *testing.T) {
 	r := NewRegex("(a(b|c)*){10,15}")
 	fmt.Println(r.Dfa.GraphViz("(a(b|c)*){10,15}"))
 
-	minDfa := r.Dfa.minimize()
-	fmt.Println(minDfa.GraphViz("min (a(b|c)*){10,15}"))
+	//minDfa := r.Dfa.Minimize()
+	//minDfa := r.Dfa.minimize()
+	//fmt.Println(minDfa.GraphViz("min (a(b|c)*){10,15}"))
 }

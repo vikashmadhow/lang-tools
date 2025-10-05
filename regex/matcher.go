@@ -66,11 +66,11 @@ func (m *Matcher) FindNext(input string) bool {
 func (m *Matcher) MatchNext(r rune) MatchType {
 	if m.LastMatch != NoMatch {
 		trans := m.Compiled.Dfa.Trans[m.State]
-		for c, t := range trans {
-			if c.match(r) {
-				m.State = t
+		for _, t := range trans {
+			if t.char.match(r) {
+				m.State = t.state
 				//if slices.Index(m.Compiled.Dfa.final, t) == -1 {
-				if !m.Compiled.Dfa.finalMap[t] {
+				if !m.Compiled.Dfa.finalMap[t.state] {
 					if m.LastMatch == FullMatch {
 						m.PartialMatch.Reset()
 						m.PartialMatch.WriteString(m.FullMatch.String())
@@ -86,16 +86,17 @@ func (m *Matcher) MatchNext(r rune) MatchType {
 					m.LastMatch = FullMatch
 				}
 				groupSet := set[int]{}
-				groups := c.groups()
-				for g := groups.Front(); g != nil; g = g.Next() {
-					group := g.Value.(int)
-					if group != 0 {
-						groupSet[group] = true
+				groups := t.char.groups
+				//for g := groups.Front(); g != nil; g = g.Next() {
+				for g := range groups {
+					//group := g.Value.(int)
+					if g != 0 {
+						groupSet[g] = true
 					}
-					s, ok := m.Groups[g.Value.(int)]
+					s, ok := m.Groups[g]
 					if !ok {
 						s = &strings.Builder{}
-						m.Groups[group] = s
+						m.Groups[g] = s
 					}
 					s.WriteRune(r)
 				}

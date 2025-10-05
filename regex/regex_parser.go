@@ -25,7 +25,7 @@
 package regex
 
 import (
-	"container/list"
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -38,7 +38,7 @@ type (
 		input    []rune
 		position int
 		group    *int
-		groups   *list.List
+		groups   set[int]
 	}
 
 	modifier struct {
@@ -150,7 +150,8 @@ func (r *parser) factor(mod *modifier) Pattern {
 				}
 				return &repeat{base, uint8(mi), uint8(ma)}
 			} else {
-				return &singleChar{mod, '{', cp(r.groups)}
+				//return &singleChar{mod, '{', cp(r.groups)}
+				return chars(mod, r.groups, false, span{'{', '{'})
 			}
 		}
 	}
@@ -205,17 +206,24 @@ func (r *parser) base(mod *modifier) Pattern {
 			if r.hasMore() {
 				r.next()
 			}
-			return &inList{
-				mod:     mod,
-				list:    listName.String(),
-				convert: conversion,
+			//return &inList{
+			//	mod:     mod,
+			//	list:    listName.String(),
+			//	convert: conversion,
+			//}
+			return &char{
+				modifier: mod,
+				list:     listName.String(),
+				convert:  &conversion,
 			}
 		} else {
 			*r.group++
-			r.groups.PushBack(*r.group)
+			g := *r.group
+			r.groups[g] = true
 
 			re := r.regex(mod)
-			r.groups.Remove(r.groups.Back())
+			//r.groups.Remove(r.groups.Back())
+			delete(r.groups, g)
 
 			// lenient parsing: don't break if no closing bracket, read to the end
 			if r.hasMore() {
@@ -238,26 +246,31 @@ func (r *parser) ch(mod *modifier) Pattern {
 			exclude = true
 		}
 
-		charSets := list.New()
+		//charSets := list.New()
+		var charSets spanSet
 		for r.hasMore() && r.peek() != ']' {
 			from := r.next()
 			if r.peek() == '-' {
 				r.next()
 				if r.hasMore() && r.peek() != ']' {
 					to := r.next()
-					charSets.PushBack(&charRange{mod, from, to, cp(r.groups)})
+					//charSets.PushBack(&charRange{mod, from, to, cp(r.groups)})
+					charSets = append(charSets, span{from, to})
 				} else {
-					charSets.PushBack(&charRange{mod, from, math.MaxUint8, cp(r.groups)})
+					//charSets.PushBack(&charRange{mod, from, math.MaxUint8, cp(r.groups)})
+					charSets = append(charSets, span{from, math.MaxUint8})
 				}
 			} else {
-				charSets.PushBack(&singleChar{mod, from, cp(r.groups)})
+				//charSets.PushBack(&singleChar{mod, from, cp(r.groups)})
+				charSets = append(charSets, span{from, from})
 			}
 		}
 		// lenient parsing: don't break if no closing square bracket, read to the end
 		if r.hasMore() {
 			r.next()
 		}
-		return &charSet{mod, exclude, *charSets, cp(r.groups), nil}
+		//return ch{mod, exclude, *charSets, cp(r.groups), nil}
+		return chars(mod, r.groups, exclude, charSets...)
 
 	} else if r.peek() == '\\' {
 		r.next()
@@ -265,59 +278,108 @@ func (r *parser) ch(mod *modifier) Pattern {
 		if r.hasMore() {
 			switch c := r.next(); c {
 			case 'd':
-				return &charRange{mod, '0', '9', cp(r.groups)}
+				//return &charRange{mod, '0', '9', cp(r.groups)}
+				return chars(mod, r.groups, false, span{'0', '9'})
 			case 'D':
-				cs := list.New()
-				cs.PushBack(&charRange{mod, '0', '9', cp(r.groups)})
-				return &charSet{mod, true, *cs, cp(r.groups), nil}
+				//cs := list.New()
+				//cs.PushBack(&charRange{mod, '0', '9', cp(r.groups)})
+				//return &charSet{mod, true, *cs, cp(r.groups), nil}
+				return chars(mod, r.groups, true, span{'0', '9'})
+
 			case 's':
-				cs := list.New()
-				cs.PushBack(&singleChar{mod, ' ', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '\t', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '\n', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '\f', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '\r', cp(r.groups)})
-				return &charSet{mod, false, *cs, cp(r.groups), nil}
+				//cs := list.New()
+				//cs.PushBack(&singleChar{mod, ' ', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '\t', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '\n', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '\f', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '\r', cp(r.groups)})
+				//return &charSet{mod, false, *cs, cp(r.groups), nil}
+				return chars(mod, r.groups, false,
+					span{' ', ' '},
+					span{'\t', '\t'},
+					span{'\n', '\n'},
+					span{'\f', '\f'},
+					span{'\r', '\r'})
+
 			case 'S':
-				cs := list.New()
-				cs.PushBack(&singleChar{mod, ' ', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '\t', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '\n', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '\f', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '\r', cp(r.groups)})
-				return &charSet{mod, true, *cs, cp(r.groups), nil}
+				//cs := list.New()
+				//cs.PushBack(&singleChar{mod, ' ', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '\t', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '\n', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '\f', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '\r', cp(r.groups)})
+				//return &charSet{mod, true, *cs, cp(r.groups), nil}
+				return chars(mod, r.groups, true,
+					span{' ', ' '},
+					span{'\t', '\t'},
+					span{'\n', '\n'},
+					span{'\f', '\f'},
+					span{'\r', '\r'})
+
 			case 'w':
-				cs := list.New()
-				cs.PushBack(&charRange{mod, '0', '9', cp(r.groups)})
-				cs.PushBack(&charRange{mod, 'a', 'z', cp(r.groups)})
-				cs.PushBack(&charRange{mod, 'A', 'Z', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '_', cp(r.groups)})
-				return &charSet{mod, false, *cs, cp(r.groups), nil}
+				//cs := list.New()
+				//cs.PushBack(&charRange{mod, '0', '9', cp(r.groups)})
+				//cs.PushBack(&charRange{mod, 'a', 'z', cp(r.groups)})
+				//cs.PushBack(&charRange{mod, 'A', 'Z', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '_', cp(r.groups)})
+				//return &charSet{mod, false, *cs, cp(r.groups), nil}
+				return chars(mod, r.groups, false,
+					span{'0', '9'},
+					span{'a', 'z'},
+					span{'A', 'Z'},
+					span{'_', '_'})
+
 			case 'W':
-				cs := list.New()
-				cs.PushBack(&charRange{mod, '0', '9', cp(r.groups)})
-				cs.PushBack(&charRange{mod, 'a', 'z', cp(r.groups)})
-				cs.PushBack(&charRange{mod, 'A', 'Z', cp(r.groups)})
-				cs.PushBack(&singleChar{mod, '_', cp(r.groups)})
-				return &charSet{mod, true, *cs, cp(r.groups), nil}
+				//cs := list.New()
+				//cs.PushBack(&charRange{mod, '0', '9', cp(r.groups)})
+				//cs.PushBack(&charRange{mod, 'a', 'z', cp(r.groups)})
+				//cs.PushBack(&charRange{mod, 'A', 'Z', cp(r.groups)})
+				//cs.PushBack(&singleChar{mod, '_', cp(r.groups)})
+				//return &charSet{mod, true, *cs, cp(r.groups), nil}
+				return chars(mod, r.groups, true,
+					span{'0', '9'},
+					span{'a', 'z'},
+					span{'A', 'Z'},
+					span{'_', '_'})
+
 			default:
-				return &singleChar{mod, c, cp(r.groups)}
+				//return &singleChar{mod, c, cp(r.groups)}
+				return chars(mod, r.groups, false, span{c, c})
 			}
 		} else {
-			return &singleChar{mod, '\\', cp(r.groups)}
+			//return &singleChar{mod, '\\', cp(r.groups)}
+			return chars(mod, r.groups, false, span{'\\', '\\'})
 		}
 	} else if r.peek() == '.' {
 		r.next()
-		return &anyChar{mod: mod}
+		//return &anyChar{mod: mod}
+		return chars(mod, r.groups, false, allUnicode...)
+
 	} else {
-		return &singleChar{mod, r.next(), cp(r.groups)}
+		//return &singleChar{mod, r.next(), cp(r.groups)}
+		c := r.next()
+		return chars(mod, r.groups, false, span{c, c})
 	}
 }
 
-func cp(groups *list.List) list.List {
-	cp := list.New()
-	for g := groups.Front(); g != nil; g = g.Next() {
-		cp.PushBack(g.Value)
+func chars(mod *modifier, groups set[int], exclude bool, spans ...span) *char {
+	if exclude {
+		spans = spanSet(spans).invertUnicode()
+	} else {
+		spans = spanSet(spans).compact()
 	}
-	return *cp
+	return &char{
+		set:      spans,
+		modifier: mod,
+		groups:   maps.Clone(groups),
+		exclude:  exclude,
+	}
 }
+
+//func cp(groups *list.List) *list.List {
+//	cp := list.New()
+//	for g := groups.Front(); g != nil; g = g.Next() {
+//		cp.PushBack(g.Value)
+//	}
+//	return cp
+//}

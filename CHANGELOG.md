@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.8] - 2025-10-04
+- Split `Automata` into `Dfa` and `Nfa` to better capture their particularities, 
+  and to properly support multiple paths over the same character in NFA.
+- `char` interface has been replaced with a struct and simplified.
+- `char` matching is now fully based on `span` and `spanSet`.
+- Regex groups now use a simpler standard set interface.
+
 ## [0.5.7] - 2025-09-29
 - Refactored tree paths as a persistent list.
 - Add the empty token to the first set of a sentence that is empty or that 

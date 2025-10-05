@@ -3,6 +3,7 @@ package regex
 import (
 	"math/rand"
 	"slices"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -34,6 +35,16 @@ func (r span) intersect(other span) bool {
 
 func (r span) match(c rune) bool {
 	return r.from <= c && c <= r.to
+}
+
+func (r span) String() string {
+	if r.from == r.to {
+		return string(r.from)
+	} else if r.to == utf8.MaxRune {
+		return string(r.from) + "-"
+	} else {
+		return string(r.from) + "-" + string(r.to)
+	}
 }
 
 func (r spanSet) len() int {
@@ -147,4 +158,14 @@ func (r spanSet) match(c rune) bool {
 		}
 	}
 	return false
+}
+
+func (r spanSet) String() string {
+	var str strings.Builder
+	str.WriteString("[")
+	for _, s := range r {
+		str.WriteString(s.String())
+	}
+	str.WriteString("]")
+	return str.String()
 }
